@@ -34,6 +34,8 @@
 		<script src="OrbitControls.js"></script>
 		<script src="TransformControls.js"></script>
 
+		<script src="OBJLoader.js"></script>
+
 		<script src="stats.min.js"></script>
 		<script src="dat.gui.min.js"></script>
 
@@ -305,6 +307,31 @@
 
 			function initFish() {
 				// TODO
+
+				var loader = new THREE.OBJLoader();
+				// load a resource
+				loader.load(
+					// resource URL
+					'ORCA.OBJ',
+					// called when resource is loaded
+					function ( object ) {
+
+						scene.add( object );
+
+					},
+					// called when loading is in progresses
+					function ( xhr ) {
+
+						console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+
+					},
+					// called when loading has errors
+					function ( error ) {
+
+						console.log( 'An error happened' );
+
+					}
+				);
 			}
 
 			function addSplineObject( position ) {
