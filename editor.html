@@ -121,7 +121,7 @@
 				//axes.position.set( - 500, - 500, - 500 );
 				//scene.add( axes );
 
-				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer = new THREE.WebGLRenderer( { antialias: false } );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.shadowMap.enabled = true;
@@ -294,11 +294,17 @@
 
 				}
 
-				load( [ new THREE.Vector3( 289.76843686945404, 452.51481137238443, 56.10018915737797 ),
-						new THREE.Vector3( -53.56300074753207, 171.49711742836848, -14.495472686253045 ),
-						new THREE.Vector3( -91.40118730204415, 176.4306956436485, -6.958271935582161 ),
-						new THREE.Vector3( -383.785318791128, 491.1365363371675, 47.869296953772746 ) ] );
 
+				load( [ new THREE.Vector3( 150, 0, 0 ),
+						new THREE.Vector3( 50, 0, 0 ),
+						new THREE.Vector3( -50, 0, 0 ),
+						new THREE.Vector3( -150, 0, 0 ) ] );
+
+				initFish()
+			}
+
+			function initFish() {
+				// TODO
 			}
 
 			function addSplineObject( position ) {
