@@ -306,7 +306,7 @@
 			}
 
 			function initFish() {
-				// TODO
+				// TODO Texture Loading + Load Manager
 
 				var loader = new THREE.OBJLoader();
 				// load a resource
@@ -314,19 +314,40 @@
 					// resource URL
 					'ORCA.OBJ',
 					// called when resource is loaded
-					function ( object ) {
+					function onLoad( object ) {
+						window.orca = object;
+						object.traverse( function ( child ) {
+							if ( child instanceof THREE.Mesh ) {
+								// child.material.map = texture;
+								child.material.wireframe = true;
+								child.scale.multiplyScalar(50);
+
+								// TODO add shader material?
+							}
+						} );
+
+						// -3, 6
+						// orca.children[0].geometry.attributes.position.array
+						// -0.59 2.42
+
+						// orca.children.splice(0, 1)
+						// orca.children.splice(2, 1)
+						// orca.children.splice(1, 1)
+
+						orca.children[0].geometry.computeBoundingBox()
+						console.log(orca.children[0].geometry.boundingBox);
 
 						scene.add( object );
 
 					},
 					// called when loading is in progresses
-					function ( xhr ) {
+					function onProgress( xhr ) {
 
 						console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
 
 					},
 					// called when loading has errors
-					function ( error ) {
+					function onError( error ) {
 
 						console.log( 'An error happened' );
 
