@@ -305,6 +305,29 @@
 				initFish()
 			}
 
+			function initTexture() {
+				const width = 256;
+				const height = 2;
+
+				const dataArray = new Float32Array( width * height * 3 );
+				const dataTexture = new THREE.DataTexture(
+					dataArray, width, height, THREE.RGBFormat, THREE.FloatType
+				);
+
+				dataTexture.needsUpdate = true;
+
+				return dataTexture;
+			}
+
+			function setTextureValue(index, x, y, z, o) {
+				const image = texture.image;
+				const { width, height, data } = image;
+				const i = width * (o || 0);
+				data[index * 3 + i + 0] = x;
+				data[index * 3 + i + 1] = y;
+				data[index * 3 + i + 2] = z;
+			}
+
 			function initFish() {
 				// TODO Texture Loading + Load Manager
 
@@ -317,85 +340,27 @@
 				return;
 				*/
 
+				texture = initTexture();
+
 				customMaterial = new THREE.ShaderMaterial({
 					wireframe: true,
 					uniforms: {
-
+							texture: { value: texture }
 					},
 					vertexShader: `
+					uniform sampler2D texture;
+
 					void main() {
-						vec3 transformed = vec3( position );
+						float tz = (position.z + 6.) / 10.;
+						vec3 transformed = position + vec3( 0., 2. * sin(tz * 3.142 * 2.), 0.);
 						vec4 mvPosition = modelViewMatrix * vec4( transformed, 1.0 );
 						gl_Position = projectionMatrix * mvPosition;
-
 					}
 					`,
 					fragmentShader: `
-uniform vec3 diffuse;
-uniform float opacity;
-
-#ifndef FLAT_SHADED
-	varying vec3 vNormal;
-#endif
-#define PI 3.14159265359
-#define PI2 6.28318530718
-#define PI_HALF 1.5707963267949
-#define RECIPROCAL_PI 0.31830988618
-#define RECIPROCAL_PI2 0.15915494
-#define LOG2 1.442695
-#define EPSILON 1e-6
-#define saturate(a) clamp( a, 0.0, 1.0 )
-#define whiteCompliment(a) ( 1.0 - saturate( a ) )
-float pow2( const in float x ) { return x*x; }
-float pow3( const in float x ) { return x*x*x; }
-float pow4( const in float x ) { float x2 = x*x; return x2*x2; }
-float average( const in vec3 color ) { return dot( color, vec3( 0.3333 ) ); }
-highp float rand( const in vec2 uv ) {
-	const highp float a = 12.9898, b = 78.233, c = 43758.5453;
-	highp float dt = dot( uv.xy, vec2( a,b ) ), sn = mod( dt, PI );
-	return fract(sin(sn) * c);
-}
-struct IncidentLight {
-	vec3 color;
-	vec3 direction;
-	bool visible;
-};
-struct ReflectedLight {
-	vec3 directDiffuse;
-	vec3 directSpecular;
-	vec3 indirectDiffuse;
-	vec3 indirectSpecular;
-};
-struct GeometricContext {
-	vec3 position;
-	vec3 normal;
-	vec3 viewDir;
-};
-
-
-void main() {
-#if 0 > 0
-	vec4 plane;
-	
-	#if 0 < 0
-		bool clipped = true;
-		
-		if ( clipped ) discard;
-	#endif
-#endif
-
-	vec4 diffuseColor = vec4( diffuse, opacity );
-  float specularStrength = 1.0;
-	ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
-	reflectedLight.indirectDiffuse += vec3( 1.0 );
-
-	reflectedLight.indirectDiffuse *= diffuseColor.rgb;
-	vec3 outgoingLight = reflectedLight.indirectDiffuse;
-	gl_FragColor = vec4( outgoingLight, diffuseColor.a );
-	gl_FragColor.rgb = toneMapping( gl_FragColor.rgb );
-  gl_FragColor = linearToOutputTexel( gl_FragColor );
-}
-
+					void main() {
+						gl_FragColor.rgb = vec3(0.);
+					}
 					`
 				})
 
