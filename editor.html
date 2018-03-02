@@ -308,6 +308,97 @@
 			function initFish() {
 				// TODO Texture Loading + Load Manager
 
+				// customMaterial = new THREE.MeshBasicMaterial({
+				// 	wireframe: true,
+				// 	color: 0x000000
+				// });
+				/*
+				gl_FragColor.rgb = vec3(0., 0., 1.);
+				return;
+				*/
+
+				customMaterial = new THREE.ShaderMaterial({
+					wireframe: true,
+					uniforms: {
+
+					},
+					vertexShader: `
+					void main() {
+						vec3 transformed = vec3( position );
+						vec4 mvPosition = modelViewMatrix * vec4( transformed, 1.0 );
+						gl_Position = projectionMatrix * mvPosition;
+
+					}
+					`,
+					fragmentShader: `
+uniform vec3 diffuse;
+uniform float opacity;
+
+#ifndef FLAT_SHADED
+	varying vec3 vNormal;
+#endif
+#define PI 3.14159265359
+#define PI2 6.28318530718
+#define PI_HALF 1.5707963267949
+#define RECIPROCAL_PI 0.31830988618
+#define RECIPROCAL_PI2 0.15915494
+#define LOG2 1.442695
+#define EPSILON 1e-6
+#define saturate(a) clamp( a, 0.0, 1.0 )
+#define whiteCompliment(a) ( 1.0 - saturate( a ) )
+float pow2( const in float x ) { return x*x; }
+float pow3( const in float x ) { return x*x*x; }
+float pow4( const in float x ) { float x2 = x*x; return x2*x2; }
+float average( const in vec3 color ) { return dot( color, vec3( 0.3333 ) ); }
+highp float rand( const in vec2 uv ) {
+	const highp float a = 12.9898, b = 78.233, c = 43758.5453;
+	highp float dt = dot( uv.xy, vec2( a,b ) ), sn = mod( dt, PI );
+	return fract(sin(sn) * c);
+}
+struct IncidentLight {
+	vec3 color;
+	vec3 direction;
+	bool visible;
+};
+struct ReflectedLight {
+	vec3 directDiffuse;
+	vec3 directSpecular;
+	vec3 indirectDiffuse;
+	vec3 indirectSpecular;
+};
+struct GeometricContext {
+	vec3 position;
+	vec3 normal;
+	vec3 viewDir;
+};
+
+
+void main() {
+#if 0 > 0
+	vec4 plane;
+	
+	#if 0 < 0
+		bool clipped = true;
+		
+		if ( clipped ) discard;
+	#endif
+#endif
+
+	vec4 diffuseColor = vec4( diffuse, opacity );
+  float specularStrength = 1.0;
+	ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
+	reflectedLight.indirectDiffuse += vec3( 1.0 );
+
+	reflectedLight.indirectDiffuse *= diffuseColor.rgb;
+	vec3 outgoingLight = reflectedLight.indirectDiffuse;
+	gl_FragColor = vec4( outgoingLight, diffuseColor.a );
+	gl_FragColor.rgb = toneMapping( gl_FragColor.rgb );
+  gl_FragColor = linearToOutputTexel( gl_FragColor );
+}
+
+					`
+				})
+
 				var loader = new THREE.OBJLoader();
 				// load a resource
 				loader.load(
@@ -320,10 +411,7 @@
 							if ( child instanceof THREE.Mesh ) {
 								child.scale.multiplyScalar(50);
 
-								child.material = new THREE.MeshBasicMaterial({
-									wireframe: true,
-									color: 0x000000
-								})
+								child.material = customMaterial
 
 								// child.material.map = texture;
 								// child.material.color = 0x000000;
@@ -365,7 +453,7 @@
 			/****************************/
 
 			function updateSplineTexture() {
-				var points = splines.uniform.getLengths(200);
+				var points = splines.uniform.getPoints(200);
 				var frenetFrames = splines.uniform.computeFrenetFrames(200);
 
 			}
