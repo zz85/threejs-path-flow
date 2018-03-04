@@ -355,6 +355,8 @@
 					setTextureValue(i, i / 256 * 1, 0, 0)
 				}
 
+				texture.needsUpdate = true;
+
 				customMaterial = new THREE.ShaderMaterial({
 					wireframe: true,
 					uniforms: {
@@ -365,10 +367,11 @@
 
 					void main() {
 						float tz = (position.z + 6.) / 10.;
-						float v = texture2D(texture, vec2(tz, 0.25)).x;
-						v = sin(tz * 3.142 * 2.);
 						// float v = texture2D(texture, vec2(0.5, 0.25)).x;
-						vec3 transformed = position + vec3( 0., v, 0.);
+						float v = texture2D(texture, vec2(tz, 0.25)).y;
+						// v = sin(tz * 3.142 * 2.);
+
+						vec3 transformed = position + vec3( 0., v / 50., 0.);
 						vec4 mvPosition = modelViewMatrix * vec4( transformed, 1.0 );
 						gl_Position = projectionMatrix * mvPosition;
 					}
@@ -391,6 +394,8 @@
 						object.traverse( function ( child ) {
 							if ( child instanceof THREE.Mesh ) {
 								child.scale.multiplyScalar(50);
+								child.position.y = 100;
+								child.rotation.y = -Math.PI / 2;
 
 								child.material = customMaterial
 
@@ -434,12 +439,20 @@
 			/****************************/
 
 			function updateSplineTexture() {
-				var points = splines.uniform.getPoints(200);
-				var frenetFrames = splines.uniform.computeFrenetFrames(200);
+				if (!window.texture) return;
+				var POINTS = 256;
+				var points = splines.uniform.getPoints(POINTS - 1);
+				var frenetFrames = splines.uniform.computeFrenetFrames(POINTS - 1);
 
-			}
-			
-			
+				// console.log('points', points);
+				for (var i = 0; i < POINTS; i++) {
+					var pt = points[i];
+					setTextureValue(i, pt.x, pt.y, pt.z);
+				}
+
+				texture.needsUpdate = true;
+
+			}			
 
 			function addSplineObject( position ) {
 
@@ -509,6 +522,7 @@
 
 					splineMesh.geometry.verticesNeedUpdate = true;
 
+					updateSplineTexture();
 				}
 
 			}
