@@ -339,14 +339,20 @@
 				gl_FragColor.rgb = vec3(0., 0., 1.);
 				return;
 				*/
-				if (!renderer.extensions.get( "OES_texture_float" )) {
-					console.log('mmooo fail');
+	
+
+				if ( ! renderer.extensions.get( "OES_texture_float" ) ) {
+					console.log("No OES_texture_float support for float textures.");
+				}
+
+				if ( renderer.capabilities.maxVertexTextures === 0 ) {
+					console.log("No support for vertex shader textures.");
 				}
 
 				texture = initTexture();
 
 				for (var i = 0; i < 256; i++) {
-					setTextureValue(i, -100., 0, 0)
+					setTextureValue(i, i / 256 * 1, 0, 0)
 				}
 
 				customMaterial = new THREE.ShaderMaterial({
@@ -359,10 +365,10 @@
 
 					void main() {
 						float tz = (position.z + 6.) / 10.;
-						//float v = texture2D(texture, vec2(tz, 0.5)).x;
-						// v = sin(tz * 3.142 * 2.);
-						float v = texture2D(texture, vec2(0.5, 0.5)).x;
-						vec3 transformed = position + vec3( 0., 2. * v, 0.);
+						float v = texture2D(texture, vec2(tz, 0.25)).x;
+						v = sin(tz * 3.142 * 2.);
+						// float v = texture2D(texture, vec2(0.5, 0.25)).x;
+						vec3 transformed = position + vec3( 0., v, 0.);
 						vec4 mvPosition = modelViewMatrix * vec4( transformed, 1.0 );
 						gl_Position = projectionMatrix * mvPosition;
 					}
