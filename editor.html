@@ -322,7 +322,7 @@
 			function setTextureValue(index, x, y, z, o) {
 				const image = texture.image;
 				const { width, height, data } = image;
-				const i = width * (o || 0);
+				const i = 3 * width * (o || 0);
 				data[index * 3 + i + 0] = x;
 				data[index * 3 + i + 1] = y;
 				data[index * 3 + i + 2] = z;
@@ -339,8 +339,15 @@
 				gl_FragColor.rgb = vec3(0., 0., 1.);
 				return;
 				*/
+				if (!renderer.extensions.get( "OES_texture_float" )) {
+					console.log('mmooo fail');
+				}
 
 				texture = initTexture();
+
+				for (var i = 0; i < 256; i++) {
+					setTextureValue(i, -100., 0, 0)
+				}
 
 				customMaterial = new THREE.ShaderMaterial({
 					wireframe: true,
@@ -352,7 +359,10 @@
 
 					void main() {
 						float tz = (position.z + 6.) / 10.;
-						vec3 transformed = position + vec3( 0., 2. * sin(tz * 3.142 * 2.), 0.);
+						//float v = texture2D(texture, vec2(tz, 0.5)).x;
+						// v = sin(tz * 3.142 * 2.);
+						float v = texture2D(texture, vec2(0.5, 0.5)).x;
+						vec3 transformed = position + vec3( 0., 2. * v, 0.);
 						vec4 mvPosition = modelViewMatrix * vec4( transformed, 1.0 );
 						gl_Position = projectionMatrix * mvPosition;
 					}
