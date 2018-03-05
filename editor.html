@@ -376,36 +376,17 @@
 						vec3 spline_pos = texture2D(texture, vec2(tz, (0.5) / textureLayers)).xyz;
 						vec3 a = texture2D(texture, vec2(tz, (1. + 0.5) / textureLayers)).xyz;
 						vec3 b = texture2D(texture, vec2(tz, (2. + 0.5) / textureLayers)).xyz;
-						vec3 c =
-							// cross(a, b);
-							texture2D(texture, vec2(tz, (3. + 0.5) / textureLayers)).xyz;
+						vec3 c = texture2D(texture, vec2(tz, (3. + 0.5) / textureLayers)).xyz;
 						mat3 basis = mat3(a, b, c);
 
 						vec4 worldPos = modelMatrix * vec4(position, 1.);
-						worldPos = vec4(vec3(worldPos.x * 0., worldPos.y, worldPos.z) * basis, 1.)
-							+ vec4(spline_pos, 1.);
+						worldPos = vec4(
+							vec3(worldPos.x * 0., worldPos.y * 1., worldPos.z * 1.) * basis
+
+							// vec3(worldPos.x, worldPos.y, worldPos.z)
+							+ spline_pos, 1.);
 						vec4 mvPosition = viewMatrix * worldPos;
 						gl_Position = projectionMatrix * mvPosition;
-
-						/*
-						float tz = (position.z + 6.) / 10.;
-						float textureLayers = 4.;
-						// (i + 0.5) / textureLayers
-
-						vec3 spline_pos = texture2D(texture, vec2(tz, (0.5) / textureLayers)).xyz;
-						vec3 a = texture2D(texture, vec2(tz, (1. + 0.5) / textureLayers)).xyz;
-						vec3 b = texture2D(texture, vec2(tz, (2. + 0.5) / textureLayers)).xyz;
-						vec3 c =
-							cross(a, b);
-							// texture2D(texture, vec2(tz, (3. + 0.5) / textureLayers)).xyz;
-						mat3 basis = mat3(a, b, c);
-
-						vec3 transformed = position;
-						vec4 worldPos = modelMatrix * vec4(vec3(transformed.x, transformed.y, transformed.z) * basis, 1.)
-							+ vec4(spline_pos, 1.);
-						vec4 mvPosition = viewMatrix * worldPos;
-						gl_Position = projectionMatrix * mvPosition;
-						*/
 					}
 					`,
 					fragmentShader: `
@@ -474,7 +455,8 @@
 				if (!window.texture) return;
 				var POINTS = 256;
 				// uniform chordal centripetal
-				var points = splines.centripetal.getPoints(POINTS - 1);
+				var points = splines.centripetal.getSpacedPoints(POINTS - 1);
+				// getPoints() - unequal arc lengths
 				var frenetFrames = splines.centripetal.computeFrenetFrames(POINTS - 1);
 				// console.log(frenetFrames);
 
