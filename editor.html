@@ -70,10 +70,10 @@
 			var splines = {};
 
 			var params = {
-				uniform: true,
+				uniform: false,
 				tension: 0.5,
 				centripetal: true,
-				chordal: true,
+				chordal: false,
 				addPoint: addPoint,
 				removePoint: removePoint,
 				exportSpline: exportSpline
@@ -134,13 +134,14 @@
 
 				var gui = new dat.GUI();
 
-				gui.add( params, 'uniform' );
-				gui.add( params, 'tension', 0, 1 ).step( 0.01 ).onChange( function( value ) {
-					splines.uniform.tension = value;
-					updateSplineOutline();
-				});
-				gui.add( params, 'centripetal' );
-				gui.add( params, 'chordal' );
+				// gui.add( params, 'uniform' );
+				// gui.add( params, 'tension', 0, 1 ).step( 0.01 ).onChange( function( value ) {
+				// 	splines.uniform.tension = value;
+				// 	splines.centripetal.tension = value;
+				// 	updateSplineOutline();
+				// });
+				// gui.add( params, 'centripetal' );
+				// gui.add( params, 'chordal' );
 				gui.add( params, 'addPoint' );
 				gui.add( params, 'removePoint' );
 				gui.add( params, 'exportSpline' );
@@ -307,7 +308,7 @@
 
 			function initTexture() {
 				const width = 256;
-				const height = 2;
+				const height = 4;
 
 				const dataArray = new Float32Array( width * height * 3 );
 				const dataTexture = new THREE.DataTexture(
@@ -369,15 +370,42 @@
 
 					void main() {
 						float tz = (position.z + 6.) / 10.;
-						// float v = texture2D(texture, vec2(0.5, 0.25)).x;
-						vec3 spline_pos = texture2D(texture, vec2(tz, 0.25)).xyz;
+						float textureLayers = 4.;
+						// (i + 0.5) / textureLayers
+
+						vec3 spline_pos = texture2D(texture, vec2(tz, (0.5) / textureLayers)).xyz;
+						vec3 a = texture2D(texture, vec2(tz, (1. + 0.5) / textureLayers)).xyz;
+						vec3 b = texture2D(texture, vec2(tz, (2. + 0.5) / textureLayers)).xyz;
+						vec3 c =
+							// cross(a, b);
+							texture2D(texture, vec2(tz, (3. + 0.5) / textureLayers)).xyz;
+						mat3 basis = mat3(a, b, c);
+
+						vec4 worldPos = modelMatrix * vec4(position, 1.);
+						worldPos = vec4(vec3(worldPos.x * 0., worldPos.y, worldPos.z) * basis, 1.)
+							+ vec4(spline_pos, 1.);
+						vec4 mvPosition = viewMatrix * worldPos;
+						gl_Position = projectionMatrix * mvPosition;
+
+						/*
+						float tz = (position.z + 6.) / 10.;
+						float textureLayers = 4.;
+						// (i + 0.5) / textureLayers
+
+						vec3 spline_pos = texture2D(texture, vec2(tz, (0.5) / textureLayers)).xyz;
+						vec3 a = texture2D(texture, vec2(tz, (1. + 0.5) / textureLayers)).xyz;
+						vec3 b = texture2D(texture, vec2(tz, (2. + 0.5) / textureLayers)).xyz;
+						vec3 c =
+							cross(a, b);
+							// texture2D(texture, vec2(tz, (3. + 0.5) / textureLayers)).xyz;
+						mat3 basis = mat3(a, b, c);
 
 						vec3 transformed = position;
-						vec4 worldPos = modelMatrix * vec4(transformed, 1.)
-						+ vec4(spline_pos, 1.);
+						vec4 worldPos = modelMatrix * vec4(vec3(transformed.x, transformed.y, transformed.z) * basis, 1.)
+							+ vec4(spline_pos, 1.);
 						vec4 mvPosition = viewMatrix * worldPos;
-						//vec4 mvPosition = modelViewMatrix * vec4( transformed, 1.0 );
 						gl_Position = projectionMatrix * mvPosition;
+						*/
 					}
 					`,
 					fragmentShader: `
@@ -445,13 +473,21 @@
 			function updateSplineTexture() {
 				if (!window.texture) return;
 				var POINTS = 256;
-				var points = splines.uniform.getPoints(POINTS - 1);
-				var frenetFrames = splines.uniform.computeFrenetFrames(POINTS - 1);
+				// uniform chordal centripetal
+				var points = splines.centripetal.getPoints(POINTS - 1);
+				var frenetFrames = splines.centripetal.computeFrenetFrames(POINTS - 1);
+				// console.log(frenetFrames);
 
 				// console.log('points', points);
 				for (var i = 0; i < POINTS; i++) {
 					var pt = points[i];
-					setTextureValue(i, pt.x, pt.y, pt.z);
+					setTextureValue(i, pt.x, pt.y, pt.z, 0);
+					pt = frenetFrames.tangents[i];
+					setTextureValue(i, pt.x, pt.y, pt.z, 1);
+					pt = frenetFrames.normals[i];
+					setTextureValue(i, pt.x, pt.y, pt.z, 2);
+					pt = frenetFrames.binormals[i];
+					setTextureValue(i, pt.x, pt.y, pt.z, 3);
 				}
 
 				texture.needsUpdate = true;
