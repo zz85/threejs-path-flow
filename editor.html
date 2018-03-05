@@ -351,11 +351,13 @@
 
 				texture = initTexture();
 
+				/*
 				for (var i = 0; i < 256; i++) {
 					setTextureValue(i, i / 256 * 1, 0, 0)
 				}
 
 				texture.needsUpdate = true;
+				*/
 
 				customMaterial = new THREE.ShaderMaterial({
 					wireframe: true,
@@ -368,11 +370,13 @@
 					void main() {
 						float tz = (position.z + 6.) / 10.;
 						// float v = texture2D(texture, vec2(0.5, 0.25)).x;
-						float v = texture2D(texture, vec2(tz, 0.25)).y;
-						// v = sin(tz * 3.142 * 2.);
+						vec3 spline_pos = texture2D(texture, vec2(tz, 0.25)).xyz;
 
-						vec3 transformed = position + vec3( 0., v / 50., 0.);
-						vec4 mvPosition = modelViewMatrix * vec4( transformed, 1.0 );
+						vec3 transformed = position;
+						vec4 worldPos = modelMatrix * vec4(transformed, 1.)
+						+ vec4(spline_pos, 1.);
+						vec4 mvPosition = viewMatrix * worldPos;
+						//vec4 mvPosition = modelViewMatrix * vec4( transformed, 1.0 );
 						gl_Position = projectionMatrix * mvPosition;
 					}
 					`,
