@@ -425,10 +425,10 @@
 				}
 
 
-				load( [ new THREE.Vector3( -150, 0, 0 ),
-						new THREE.Vector3( -50, 0, 0 ),
-						new THREE.Vector3( 50, 0, 0 ),
-						new THREE.Vector3( 150, 0, 0 ) ] );
+				load( [ new THREE.Vector3( -150 * 4, 0, 0 ),
+						new THREE.Vector3( -50 * 4, 0, 0 ),
+						new THREE.Vector3( 50 * 4, 0, 0 ),
+						new THREE.Vector3( 150 * 4, 0, 0 ) ] );
 
 				initFish()
 			}
@@ -439,7 +439,9 @@
 
 				const dataArray = new Float32Array( width * height * 3 );
 				const dataTexture = new THREE.DataTexture(
-					dataArray, width, height, THREE.RGBFormat, THREE.FloatType
+                    dataArray, width, height, THREE.RGBFormat, THREE.FloatType, 
+                    THREE.RepeatWrapping, THREE.RepeatWrapping,
+                    THREE.LinearFilter, THREE.LinearMipMapLinearFilter
 				);
 
 				dataTexture.needsUpdate = true;
@@ -472,22 +474,7 @@
 					console.log("No support for vertex shader textures.");
 				}
 
-				texture = initTexture();
-
-				/*
-				for (var i = 0; i < 256; i++) {
-					setTextureValue(i, i / 256 * 1, 0, 0)
-				}
-
-				texture.needsUpdate = true;
-
-				// 
-
-				orca.children[0].geometry.computeBoundingBox()
-				bb = orca.children[0].geometry.boundingBox
-				bb.max.z - bb.min.z
-
-				*/
+                texture = initTexture();
 
 				customMaterial = new THREE.ShaderMaterial({
 					wireframe: true,
@@ -498,7 +485,9 @@
 					uniform sampler2D texture;
 
 					void main() {
-						float tz = (position.x + 6. * 50.) / 10. / 50.;
+                        float tz = (position.x + 161.) / 479.51 * 0.0639 + 0.;
+                        //  0.39
+                        // splineOffset * pathPortion + pathOffset
 						float textureLayers = 4.; // look up takes (i + 0.5) / textureLayers
 
 						vec3 spline_pos = texture2D(texture, vec2(tz, (0.5) / textureLayers)).xyz;
@@ -536,7 +525,6 @@
                         
                         rotMat = new THREE.Matrix4()
                         rotMat.makeRotationY( -Math.PI / 2);
-                        
                         scaleMat = new THREE.Matrix4()
                         scaleMat.makeScale(50, 50, 50)
 
@@ -559,13 +547,21 @@
 						// -3, 6
 						// orca.children[0].geometry.attributes.position.array
 
-                        orca.children[0].geometry.computeBoundingBox()
-                        bb = orca.children[0].geometry.boundingBox
-                        // use x-axis aligned
-                        len = bb.max.x - bb.min.x
-                        console.log(len, bb);
+                        geoms = orca.children.map(child => child.geometry);
+                        bbs = geoms.map(geo => {
+                            geo.computeBoundingBox();
+                            return geo.boundingBox;
+                        });
 
-						scene.add( object );
+                        // use x-axis aligned
+
+                        min = Math.min(...bbs.map(bb => bb.min.x))
+                        len = Math.max(...bbs.map(bb => bb.max.x)) - min
+                        console.log(len, min);
+
+                        scene.add( object );
+                        
+                        updateSplineOutline()
 
 					},
 					// called when loading is in progresses
@@ -587,7 +583,14 @@
 
 			function updateSplineTexture() {
 				if (!window.texture) return;
-				var POINTS = 256;
+                var POINTS = 256;
+                
+                splines.centripetal.arcLengthDivisions = 2000;
+                splines.centripetal.updateArcLengths()
+                splineLen = splines.centripetal.getLength()
+                f = len / splineLen
+                console.log(f);
+
 				// uniform chordal centripetal
 				var points = splines.centripetal.getSpacedPoints(POINTS - 1);
 				// getPoints() - unequal arc lengths
