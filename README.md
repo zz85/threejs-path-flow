@@ -16,11 +16,23 @@ Feel free to hack around with the code.
 
 ### Credits
 
-Killer Whale Orca 3D Model from https://free3d.com/3d-model/killer-whale-89887.html
+Killer Whale Orca 3D Model - [https://free3d.com/3d-model/killer-whale-89887.html](https://free3d.com/3d-model/killer-whale-89887.html)
+
+
+### Technical details
+
+Path positions and Frenet Frames (containing tangents, normals and binormals) are generated using three.js Curve class.
+
+These are stored in a DataTexture in 4 rows.
+
+The vertex shader reads the texture, based on its offset transforms the geometry position.
+
+(More to come)
+
 
 ### Context
 
-You can find the full story in this tweet. https://twitter.com/BlurSpline/status/966114594065326080
+You can find the full story in [this tweet](https://twitter.com/BlurSpline/status/966114594065326080).
 
 Basically I saw that @leon196 had built [a curve modifier for Unity3D](https://github.com/leon196/CurveModifier) and I thought there was no reason it cannot be done in js/web/threejs too.
 
@@ -37,4 +49,4 @@ The most useful article I read about doing so was from prideout's blog post. htt
 Next steps was the usual - looking into threejs examples and picking up what could be used.
 In this case, picking off the Spline Editor and Obj Loader examples.
 
-Thanks to @mrdoob and @thespite for enouraging me to try this as usual.
+Thanks to [@mrdoob](https://twitter.com/mrdoob) and [@thespite](https://twitter.com/thespite) for enouraging me to try this as usual.
