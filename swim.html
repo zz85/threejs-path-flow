@@ -77,7 +77,9 @@
 				addPoint: addPoint,
 				removePoint: removePoint,
 				exportSpline: exportSpline
-			};
+            };
+            
+            BITS = 3;
 
 			init();
 			animate();
@@ -437,13 +439,19 @@
 				const width = 256;
 				const height = 4;
 
-				const dataArray = new Float32Array( width * height * 3 );
+				const dataArray = new Float32Array( width * height * BITS );
 				const dataTexture = new THREE.DataTexture(
-                    dataArray, width, height, THREE.RGBFormat, THREE.FloatType, 
-                    THREE.RepeatWrapping, THREE.RepeatWrapping,
-                    THREE.LinearFilter, THREE.LinearMipMapLinearFilter
-				);
-
+                    dataArray,
+                    width,
+                    height,
+                    THREE.RGBFormat,
+                    THREE.FloatType
+                );
+                // dataTexture.wrapS = THREE.RepeatWrapping;
+                // dataTexture.wrapY = THREE.RepeatWrapping;
+                dataTexture.magFilter = THREE.LinearFilter;
+                // dataTexture.minFilter = THREE.LinearMipMapLinearFilter; // requires rgba
+                //anisotropy
 				dataTexture.needsUpdate = true;
 
 				return dataTexture;
@@ -452,10 +460,10 @@
 			function setTextureValue(index, x, y, z, o) {
 				const image = texture.image;
 				const { width, height, data } = image;
-				const i = 3 * width * (o || 0);
-				data[index * 3 + i + 0] = x;
-				data[index * 3 + i + 1] = y;
-				data[index * 3 + i + 2] = z;
+				const i = BITS * width * (o || 0);
+				data[index * BITS + i + 0] = x;
+				data[index * BITS + i + 1] = y;
+				data[index * BITS + i + 2] = z;
 			}
 
 			function initFish() {
@@ -585,7 +593,7 @@
 				if (!window.texture) return;
                 var POINTS = 256;
                 
-                splines.centripetal.arcLengthDivisions = 2000;
+                splines.centripetal.arcLengthDivisions = 200;
                 splines.centripetal.updateArcLengths()
                 splineLen = splines.centripetal.getLength()
                 f = len / splineLen
