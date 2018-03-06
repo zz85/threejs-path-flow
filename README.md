@@ -8,11 +8,13 @@ It's quite a work in progress and renders only in wireframe now.
 
 Feel free to hack around with the code.
 
-Examples: 
+### Examples
 
-[Flow](https://zz85.github.io/threejs-flow-path/flow.html) - Allow a mesh to follow and bends along a path
-[Bend](https://zz85.github.io/threejs-flow-path/bend.html) - Bend a mesh along another curve
+[Flow](https://zz85.github.io/threejs-path-flow/flow.html) - Allow a mesh to follow and bends along a path
 
+[Bend](https://zz85.github.io/threejs-path-flow/bend.html) - Bend a mesh along another curve
+
+### Credits
 
 Killer Whale Orca 3D Model from https://free3d.com/3d-model/killer-whale-89887.html
 
