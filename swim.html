@@ -70,13 +70,16 @@
 			var splines = {};
 
 			var params = {
+                path: 0,
 				uniform: false,
 				tension: 0.5,
 				centripetal: true,
 				chordal: false,
 				addPoint: addPoint,
 				removePoint: removePoint,
-				exportSpline: exportSpline
+                exportSpline: exportSpline,
+                closed: true,
+                loop: true
             };
             
             BITS = 3;
@@ -134,19 +137,31 @@
 				stats = new Stats();
 				container.appendChild( stats.dom );
 
-				var gui = new dat.GUI();
+				gui = new dat.GUI();
 
-				// gui.add( params, 'uniform' );
+                gui.add( params, 'loop' );
+                
+
 				// gui.add( params, 'tension', 0, 1 ).step( 0.01 ).onChange( function( value ) {
 				// 	splines.uniform.tension = value;
 				// 	splines.centripetal.tension = value;
 				// 	updateSplineOutline();
-				// });
+                // });                
 				// gui.add( params, 'centripetal' );
-				// gui.add( params, 'chordal' );
+                // gui.add( params, 'chordal' );
+                gui.add( params, 'closed' ).onChange((v) => {
+                    splines.centripetal.closed = v;
+                })
+                
+                gui.add( params, 'path', 0, 1 ).step( 0.01 ).onChange( function( value ) {
+					updateValue('pathOffset', value);
+                });
+
 				gui.add( params, 'addPoint' );
 				gui.add( params, 'removePoint' );
-				gui.add( params, 'exportSpline' );
+                gui.add( params, 'exportSpline' );
+                
+
 				gui.open();
 
 				// Controls
@@ -399,7 +414,7 @@
 				curve.mesh.castShadow = true;
 				splines.uniform = curve;
 
-				curve = new THREE.CatmullRomCurve3( positions );
+				curve = new THREE.CatmullRomCurve3( positions, true );
 				curve.curveType = 'centripetal';
 				curve.mesh = new THREE.Line( geometry.clone(), new THREE.LineBasicMaterial( {
 					color: 0x00ff00,
@@ -424,13 +439,26 @@
 					var spline = splines[ k ];
 					scene.add( spline.mesh );
 
-				}
+                }
+                
+
+                var controlPoints = [];
+                for (var i = 0; i < 5; i ++) {
+                    controlPoints.push(
+                        new THREE.Vector3( (Math.random() - 0.5) * 1500, 0,  (Math.random() - 0.5) * 1500 )
+                    )
+                }
+
+                load(controlPoints)
 
 
+                /*
 				load( [ new THREE.Vector3( -150 * 4, 0, 0 ),
 						new THREE.Vector3( -50 * 4, 0, 0 ),
 						new THREE.Vector3( 50 * 4, 0, 0 ),
-						new THREE.Vector3( 150 * 4, 0, 0 ) ] );
+                        new THREE.Vector3( 150 * 4, 0, 0 ) ] );
+                        
+                */
 
 				initFish()
 			}
@@ -447,7 +475,7 @@
                     THREE.RGBFormat,
                     THREE.FloatType
                 );
-                // dataTexture.wrapS = THREE.RepeatWrapping;
+                dataTexture.wrapS = THREE.RepeatWrapping;
                 // dataTexture.wrapY = THREE.RepeatWrapping;
                 dataTexture.magFilter = THREE.LinearFilter;
                 // dataTexture.minFilter = THREE.LinearMipMapLinearFilter; // requires rgba
@@ -487,21 +515,28 @@
 				customMaterial = new THREE.ShaderMaterial({
 					wireframe: true,
 					uniforms: {
-							texture: { value: texture }
+                            texture: { value: texture },
+                            pathOffset: { type: 'f', value: 0 }, // time of path curve
+                            pathSegment: { type: 'f', value: 0 }, // fractional length of path
+                            spookOffset: { type: 'f', value: 161 },
+                            spookLength: { type: 'f', value: 400 },
 					},
 					vertexShader: `
-					uniform sampler2D texture;
+                    uniform sampler2D texture;
+
+                    uniform float pathOffset;
+                    uniform float pathSegment;
+                    uniform float spookOffset;
+                    uniform float spookLength;
 
 					void main() {
-                        float tz = (position.x + 161.) / 479.51 * 0.0639 + 0.;
-                        //  0.39
-                        // splineOffset * pathPortion + pathOffset
+                        float mt = 1. - (position.x + spookOffset) / spookLength * pathSegment + pathOffset;
 						float textureLayers = 4.; // look up takes (i + 0.5) / textureLayers
 
-						vec3 spline_pos = texture2D(texture, vec2(tz, (0.5) / textureLayers)).xyz;
-						vec3 a = texture2D(texture, vec2(tz, (1. + 0.5) / textureLayers)).xyz;
-						vec3 b = texture2D(texture, vec2(tz, (2. + 0.5) / textureLayers)).xyz;
-						vec3 c = texture2D(texture, vec2(tz, (3. + 0.5) / textureLayers)).xyz;
+						vec3 spline_pos = texture2D(texture, vec2(mt, (0.5) / textureLayers)).xyz;
+						vec3 a = texture2D(texture, vec2(mt, (1. + 0.5) / textureLayers)).xyz;
+						vec3 b = texture2D(texture, vec2(mt, (2. + 0.5) / textureLayers)).xyz;
+						vec3 c = texture2D(texture, vec2(mt, (3. + 0.5) / textureLayers)).xyz;
 						mat3 basis = mat3(a, b, c);
 
 						vec4 worldPos = modelMatrix * vec4(position, 1.);
@@ -567,6 +602,9 @@
                         len = Math.max(...bbs.map(bb => bb.max.x)) - min
                         console.log(len, min);
 
+                        updateValue('spookOffset', -min);
+                        updateValue('spookLength', len); // 
+
                         scene.add( object );
                         
                         updateSplineOutline()
@@ -587,7 +625,11 @@
 				);
 			}
 
-			/****************************/
+            /****************************/
+            
+            function updateValue(name, v) {
+                customMaterial.uniforms[name].value = v;
+            }
 
 			function updateSplineTexture() {
 				if (!window.texture) return;
@@ -597,12 +639,16 @@
                 splines.centripetal.updateArcLengths()
                 splineLen = splines.centripetal.getLength()
                 f = len / splineLen
+
+                updateValue('spookOffset', 0);
+                updateValue('pathSegment', f);
+
                 console.log(f);
 
 				// uniform chordal centripetal
 				var points = splines.centripetal.getSpacedPoints(POINTS - 1);
 				// getPoints() - unequal arc lengths
-				var frenetFrames = splines.centripetal.computeFrenetFrames(POINTS - 1);
+				var frenetFrames = splines.centripetal.computeFrenetFrames(POINTS - 1, params.closed);
 				// console.log(frenetFrames);
 
 				// console.log('points', points);
@@ -740,7 +786,14 @@
 				requestAnimationFrame( animate );
 				render();
 				stats.update();
-				transformControl.update();
+                transformControl.update();
+                
+                if (params.loop) {
+                    params.path += 0.005;
+                    params.path %= 1;
+                    gui.updateDisplay();
+                    updateValue('pathOffset', params.path);
+                }
 
 			}
 
