@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>three.js webgl - geometry - bend editor</title>
+		<title>three.js webgl - path flow</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
@@ -26,7 +26,7 @@
 	<body>
 
 		<div id="container"></div>
-		<div id="info"><a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - geometry - bend editor</div>
+		<div id="info"><a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - path flow aka curve modifier</div>
 
 		<script src="three.js"></script>
 
@@ -40,19 +40,8 @@
 		<script src="dat.gui.min.js"></script>
 
 		<script>
-
-			String.prototype.format = function () {
-
-				var str = this;
-
-				for ( var i = 0; i < arguments.length; i ++ ) {
-
-					str = str.replace( '{' + i + '}', arguments[ i ] );
-
-				}
-				return str;
-
-			};
+			var BITS = 3;
+			var TEXTURE_WIDTH = 256; // points on the texture
 
 			var container, stats;
 			var camera, scene, renderer;
@@ -70,19 +59,19 @@
 			var splines = {};
 
 			var params = {
-                path: 0,
+				path: 0,
 				uniform: false,
 				tension: 0.5,
 				centripetal: true,
 				chordal: false,
 				addPoint: addPoint,
 				removePoint: removePoint,
-                exportSpline: exportSpline,
-                closed: true,
-                loop: true
-            };
-            
-            BITS = 3;
+				exportSpline: exportSpline,
+				closed: true,
+				play: true
+			};
+			
+			
 
 			init();
 			animate();
@@ -139,28 +128,29 @@
 
 				gui = new dat.GUI();
 
-                gui.add( params, 'loop' );
-                
+				gui.add( params, 'play' );
+				
 
 				// gui.add( params, 'tension', 0, 1 ).step( 0.01 ).onChange( function( value ) {
 				// 	splines.uniform.tension = value;
 				// 	splines.centripetal.tension = value;
 				// 	updateSplineOutline();
-                // });                
+				// });                
 				// gui.add( params, 'centripetal' );
-                // gui.add( params, 'chordal' );
-                gui.add( params, 'closed' ).onChange((v) => {
-                    splines.centripetal.closed = v;
-                })
-                
-                gui.add( params, 'path', 0, 1 ).step( 0.01 ).onChange( function( value ) {
+				// gui.add( params, 'chordal' );
+
+				// gui.add( params, 'closed' ).onChange((v) => {
+				// 	splines.centripetal.closed = v;
+				// })
+				
+				gui.add( params, 'path', 0, 1 ).step( 0.01 ).onChange( function( value ) {
 					updateValue('pathOffset', value);
-                });
+				});
 
 				gui.add( params, 'addPoint' );
 				gui.add( params, 'removePoint' );
-                gui.add( params, 'exportSpline' );
-                
+				gui.add( params, 'exportSpline' );
+				
 
 				gui.open();
 
@@ -277,133 +267,6 @@
 
 				}
 
-				THREE.CatmullRomCurve3.prototype.computeFrenetFrames = function ( segments, closed ) {
-
-					// see http://www.cs.indiana.edu/pub/techreports/TR425.pdf
-
-					var normal = new THREE.Vector3();
-
-					var tangents = [];
-					var normals = [];
-					var binormals = [];
-
-					var vec = new THREE.Vector3();
-					var mat = new THREE.Matrix4();
-
-					var i, u, theta;
-
-					// compute the tangent vectors for each segment on the curve
-
-					for ( i = 0; i <= segments; i ++ ) {
-
-						u = i / segments;
-
-						tangents[ i ] = this.getTangentAt( u );
-						tangents[ i ].normalize();
-
-					}
-
-					// select an initial normal vector perpendicular to the first tangent vector,
-					// and in the direction of the minimum tangent xyz component
-
-					normals[ 0 ] = new THREE.Vector3();
-					binormals[ 0 ] = new THREE.Vector3();
-					var min = Number.MAX_VALUE;
-					var tx = Math.abs( tangents[ 0 ].x );
-					var ty = Math.abs( tangents[ 0 ].y );
-					var tz = Math.abs( tangents[ 0 ].z );
-
-					/**/
-
-					if ( tx <= min ) {
-
-						min = tx;
-						normal.set( 1, 0, 0 );
-
-					}
-
-					if ( ty <= min ) {
-
-						min = ty;
-						normal.set( 0, 1, 0 );
-
-					}
-
-					if ( tz <= min ) {
-
-						normal.set( 0, 0, 1 );
-
-					}
-
-					// console.log(normal);
-
-
-					vec.crossVectors( tangents[ 0 ], normal ).normalize();
-
-					normals[ 0 ].crossVectors( tangents[ 0 ], vec );
-					binormals[ 0 ].crossVectors( tangents[ 0 ], normals[ 0 ] );
-					
-					
-
-					// binormals[ 0 ].set(0, 0, 1);
-					// normals[ 0 ].crossVectors(tangents[ 0 ], binormals[ 0 ]).normalize();
-					
-
-					// compute the slowly-varying normal and binormal vectors for each segment on the curve
-
-					for ( i = 1; i <= segments; i ++ ) {
-
-						normals[ i ] = normals[ i - 1 ].clone();
-
-						binormals[ i ] = binormals[ i - 1 ].clone();
-
-						vec.crossVectors( tangents[ i - 1 ], tangents[ i ] );
-
-						if ( vec.length() > Number.EPSILON ) {
-
-							vec.normalize();
-
-							theta = Math.acos( THREE.Math.clamp( tangents[ i - 1 ].dot( tangents[ i ] ), - 1, 1 ) ); // clamp for floating pt errors
-
-							normals[ i ].applyMatrix4( mat.makeRotationAxis( vec, theta ) );
-
-						}
-
-						binormals[ i ].crossVectors( tangents[ i ], normals[ i ] );
-
-					}
-
-					// if the curve is closed, postprocess the vectors so the first and last normal vectors are the same
-
-					if ( closed === true ) {
-
-						theta = Math.acos( THREE.Math.clamp( normals[ 0 ].dot( normals[ segments ] ), - 1, 1 ) );
-						theta /= segments;
-
-						if ( tangents[ 0 ].dot( vec.crossVectors( normals[ 0 ], normals[ segments ] ) ) > 0 ) {
-
-							theta = - theta;
-
-						}
-
-						for ( i = 1; i <= segments; i ++ ) {
-
-							// twist a little...
-							normals[ i ].applyMatrix4( mat.makeRotationAxis( tangents[ i ], theta * i ) );
-							binormals[ i ].crossVectors( tangents[ i ], normals[ i ] );
-
-						}
-
-					}
-
-					return {
-						tangents: tangents,
-						normals: normals,
-						binormals: binormals
-					};
-
-				}
-
 				var curve = new THREE.CatmullRomCurve3( positions );
 				curve.curveType = 'catmullrom';
 				curve.mesh = new THREE.Line( geometry.clone(), new THREE.LineBasicMaterial( {
@@ -422,6 +285,7 @@
 					linewidth: 2
 					} ) );
 				curve.mesh.castShadow = true;
+				curve.closed = true;
 				splines.centripetal = curve;
 
 				curve = new THREE.CatmullRomCurve3( positions );
@@ -439,47 +303,44 @@
 					var spline = splines[ k ];
 					scene.add( spline.mesh );
 
-                }
-                
+				}
+				
 
-                var controlPoints = [];
-                for (var i = 0; i < 5; i ++) {
-                    controlPoints.push(
-                        new THREE.Vector3( (Math.random() - 0.5) * 1500, 0,  (Math.random() - 0.5) * 1500 )
-                    )
-                }
+				var controlPoints = [];
+				for (var i = 0; i < 5; i ++) {
+					controlPoints.push(
+						new THREE.Vector3( (Math.random() - 0.5) * 1500, 0,  (Math.random() - 0.5) * 1500 )
+					)
+				}
 
-                load(controlPoints)
+				load(controlPoints)
 
 
-                /*
+				/*
 				load( [ new THREE.Vector3( -150 * 4, 0, 0 ),
 						new THREE.Vector3( -50 * 4, 0, 0 ),
 						new THREE.Vector3( 50 * 4, 0, 0 ),
-                        new THREE.Vector3( 150 * 4, 0, 0 ) ] );
-                        
-                */
+						new THREE.Vector3( 150 * 4, 0, 0 ) ] );
+						
+				*/
 
 				initFish()
 			}
 
 			function initTexture() {
-				const width = 256;
 				const height = 4;
 
-				const dataArray = new Float32Array( width * height * BITS );
+				const dataArray = new Float32Array( TEXTURE_WIDTH * height * BITS );
 				const dataTexture = new THREE.DataTexture(
-                    dataArray,
-                    width,
-                    height,
-                    THREE.RGBFormat,
-                    THREE.FloatType
-                );
-                dataTexture.wrapS = THREE.RepeatWrapping;
-                // dataTexture.wrapY = THREE.RepeatWrapping;
-                dataTexture.magFilter = THREE.LinearFilter;
-                // dataTexture.minFilter = THREE.LinearMipMapLinearFilter; // requires rgba
-                //anisotropy
+					dataArray,
+					TEXTURE_WIDTH,
+					height,
+					THREE.RGBFormat,
+					THREE.FloatType
+				);
+				dataTexture.wrapS = THREE.RepeatWrapping;
+				dataTexture.wrapY = THREE.RepeatWrapping;
+				dataTexture.magFilter = THREE.LinearFilter;
 				dataTexture.needsUpdate = true;
 
 				return dataTexture;
@@ -510,30 +371,30 @@
 					console.log("No support for vertex shader textures.");
 				}
 
-                texture = initTexture();
+				texture = initTexture();
 
 				customMaterial = new THREE.ShaderMaterial({
 					wireframe: true,
 					uniforms: {
-                            texture: { value: texture },
-                            pathOffset: { type: 'f', value: 0 }, // time of path curve
-                            pathSegment: { type: 'f', value: 0 }, // fractional length of path
-                            spookOffset: { type: 'f', value: 161 },
-                            spookLength: { type: 'f', value: 400 },
+							texture: { value: texture },
+							pathOffset: { type: 'f', value: 0 }, // time of path curve
+							pathSegment: { type: 'f', value: 1 }, // fractional length of path
+							spineOffset: { type: 'f', value: 161 },
+							spineLength: { type: 'f', value: 400 },
 					},
 					vertexShader: `
-                    uniform sampler2D texture;
+					uniform sampler2D texture;
 
-                    uniform float pathOffset;
-                    uniform float pathSegment;
-                    uniform float spookOffset;
-                    uniform float spookLength;
+					uniform float pathOffset;
+					uniform float pathSegment;
+					uniform float spineOffset;
+					uniform float spineLength;
 
 					void main() {
-                        float mt = 1. - (position.x + spookOffset) / spookLength * pathSegment + pathOffset;
+						float mt = 1. - (position.x + spineOffset) / spineLength * pathSegment + pathOffset;
 						float textureLayers = 4.; // look up takes (i + 0.5) / textureLayers
 
-						vec3 spline_pos = texture2D(texture, vec2(mt, (0.5) / textureLayers)).xyz;
+						vec3 spinePos = texture2D(texture, vec2(mt, (0.5) / textureLayers)).xyz;
 						vec3 a = texture2D(texture, vec2(mt, (1. + 0.5) / textureLayers)).xyz;
 						vec3 b = texture2D(texture, vec2(mt, (2. + 0.5) / textureLayers)).xyz;
 						vec3 c = texture2D(texture, vec2(mt, (3. + 0.5) / textureLayers)).xyz;
@@ -541,9 +402,9 @@
 
 						vec4 worldPos = modelMatrix * vec4(position, 1.);
 						worldPos = vec4(
-                            basis
-                                * vec3(worldPos.x * 0., worldPos.y * 1., worldPos.z * 1.)
-							    + spline_pos
+							basis
+								* vec3(worldPos.x * 0., worldPos.y * 1., worldPos.z * 1.)
+								+ spinePos
 							, 1.);
 
 						vec4 mvPosition = viewMatrix * worldPos;
@@ -564,50 +425,47 @@
 					'ORCA.OBJ',
 					// called when resource is loaded
 					function onLoad( object ) {
-                        window.orca = object;
-                        
-                        rotMat = new THREE.Matrix4()
-                        rotMat.makeRotationY( -Math.PI / 2);
-                        scaleMat = new THREE.Matrix4()
-                        scaleMat.makeScale(50, 50, 50)
+						window.orca = object;
+						
+						rotMat = new THREE.Matrix4()
+						rotMat.makeRotationY( -Math.PI / 2);
+						scaleMat = new THREE.Matrix4()
+						scaleMat.makeScale(50, 50, 50)
 
 						object.traverse( function ( child ) {
 							if ( child instanceof THREE.Mesh ) {
-                                child.geometry.applyMatrix(scaleMat);
-                                child.geometry.applyMatrix(rotMat);
-                                
+								child.geometry.applyMatrix(scaleMat);
+								child.geometry.applyMatrix(rotMat);
+								
 								// child.scale.multiplyScalar(50);
 								// child.position.y = 100;
 								// child.rotation.y = -Math.PI / 2;
 
 								child.material = customMaterial
+								// child.castShadow = true
 
 								// child.material.map = texture;
 								// child.material.color = 0x000000;
 							}
 						} );
 
-						// -3, 6
-						// orca.children[0].geometry.attributes.position.array
+						geoms = orca.children.map(child => child.geometry);
+						bbs = geoms.map(geo => {
+							geo.computeBoundingBox();
+							return geo.boundingBox;
+						});
 
-                        geoms = orca.children.map(child => child.geometry);
-                        bbs = geoms.map(geo => {
-                            geo.computeBoundingBox();
-                            return geo.boundingBox;
-                        });
+						// use x-axis aligned
+						min = Math.min(...bbs.map(bb => bb.min.x))
+						len = Math.max(...bbs.map(bb => bb.max.x)) - min
+						console.log(len, min);
 
-                        // use x-axis aligned
+						updateValue('spineOffset', -min);
+						updateValue('spineLength', len); // 
 
-                        min = Math.min(...bbs.map(bb => bb.min.x))
-                        len = Math.max(...bbs.map(bb => bb.max.x)) - min
-                        console.log(len, min);
-
-                        updateValue('spookOffset', -min);
-                        updateValue('spookLength', len); // 
-
-                        scene.add( object );
-                        
-                        updateSplineOutline()
+						scene.add( object );
+						
+						updateSplineOutline()
 
 					},
 					// called when loading is in progresses
@@ -625,34 +483,33 @@
 				);
 			}
 
-            /****************************/
-            
-            function updateValue(name, v) {
-                customMaterial.uniforms[name].value = v;
-            }
+			/****************************/
+			
+			function updateValue(name, v) {
+				customMaterial.uniforms[name].value = v;
+			}
 
 			function updateSplineTexture() {
 				if (!window.texture) return;
-                var POINTS = 256;
-                
-                splines.centripetal.arcLengthDivisions = 200;
-                splines.centripetal.updateArcLengths()
-                splineLen = splines.centripetal.getLength()
-                f = len / splineLen
+				
+				splines.centripetal.arcLengthDivisions = 200;
+				splines.centripetal.updateArcLengths()
+				splineLen = splines.centripetal.getLength()
+				f = len / splineLen
 
-                updateValue('spookOffset', 0);
-                updateValue('pathSegment', f);
+				updateValue('spineOffset', 0);
+				updateValue('pathSegment', f);
 
-                console.log(f);
+				console.log(f);
 
 				// uniform chordal centripetal
-				var points = splines.centripetal.getSpacedPoints(POINTS - 1);
+				var points = splines.centripetal.getSpacedPoints(TEXTURE_WIDTH - 1);
 				// getPoints() - unequal arc lengths
-				var frenetFrames = splines.centripetal.computeFrenetFrames(POINTS - 1, params.closed);
+				var frenetFrames = splines.centripetal.computeFrenetFrames(TEXTURE_WIDTH - 1, params.closed);
 				// console.log(frenetFrames);
 
 				// console.log('points', points);
-				for (var i = 0; i < POINTS; i++) {
+				for (var i = 0; i < TEXTURE_WIDTH; i++) {
 					var pt = points[i];
 					setTextureValue(i, pt.x, pt.y, pt.z, 0);
 					pt = frenetFrames.tangents[i];
@@ -747,7 +604,7 @@
 				for ( var i = 0; i < splinePointsLength; i ++ ) {
 
 					var p = splineHelperObjects[ i ].position;
-					strplace.push( 'new THREE.Vector3({0}, {1}, {2})'.format( p.x, p.y, p.z ) )
+					strplace.push( `new THREE.Vector3(${p.x}, ${p.y}, ${p.z})` )
 
 				}
 
@@ -786,14 +643,14 @@
 				requestAnimationFrame( animate );
 				render();
 				stats.update();
-                transformControl.update();
-                
-                if (params.loop) {
-                    params.path += 0.005;
-                    params.path %= 1;
-                    gui.updateDisplay();
-                    updateValue('pathOffset', params.path);
-                }
+				transformControl.update();
+				
+				if (params.play) {
+					params.path += 0.005;
+					params.path %= 1;
+					gui.updateDisplay();
+					updateValue('pathOffset', params.path);
+				}
 
 			}
 
