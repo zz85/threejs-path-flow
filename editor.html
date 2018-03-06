@@ -260,6 +260,133 @@
 
 				}
 
+				THREE.CatmullRomCurve3.prototype.computeFrenetFrames = function ( segments, closed ) {
+
+					// see http://www.cs.indiana.edu/pub/techreports/TR425.pdf
+
+					var normal = new THREE.Vector3();
+
+					var tangents = [];
+					var normals = [];
+					var binormals = [];
+
+					var vec = new THREE.Vector3();
+					var mat = new THREE.Matrix4();
+
+					var i, u, theta;
+
+					// compute the tangent vectors for each segment on the curve
+
+					for ( i = 0; i <= segments; i ++ ) {
+
+						u = i / segments;
+
+						tangents[ i ] = this.getTangentAt( u );
+						tangents[ i ].normalize();
+
+					}
+
+					// select an initial normal vector perpendicular to the first tangent vector,
+					// and in the direction of the minimum tangent xyz component
+
+					normals[ 0 ] = new THREE.Vector3();
+					binormals[ 0 ] = new THREE.Vector3();
+					var min = Number.MAX_VALUE;
+					var tx = Math.abs( tangents[ 0 ].x );
+					var ty = Math.abs( tangents[ 0 ].y );
+					var tz = Math.abs( tangents[ 0 ].z );
+
+					/**/
+
+					if ( tx <= min ) {
+
+						min = tx;
+						normal.set( 1, 0, 0 );
+
+					}
+
+					if ( ty <= min ) {
+
+						min = ty;
+						normal.set( 0, 1, 0 );
+
+					}
+
+					if ( tz <= min ) {
+
+						normal.set( 0, 0, 1 );
+
+					}
+
+					// console.log(normal);
+
+
+					vec.crossVectors( tangents[ 0 ], normal ).normalize();
+
+					normals[ 0 ].crossVectors( tangents[ 0 ], vec );
+					binormals[ 0 ].crossVectors( tangents[ 0 ], normals[ 0 ] );
+					
+					
+
+					// binormals[ 0 ].set(0, 0, 1);
+					// normals[ 0 ].crossVectors(tangents[ 0 ], binormals[ 0 ]).normalize();
+					
+
+					// compute the slowly-varying normal and binormal vectors for each segment on the curve
+
+					for ( i = 1; i <= segments; i ++ ) {
+
+						normals[ i ] = normals[ i - 1 ].clone();
+
+						binormals[ i ] = binormals[ i - 1 ].clone();
+
+						vec.crossVectors( tangents[ i - 1 ], tangents[ i ] );
+
+						if ( vec.length() > Number.EPSILON ) {
+
+							vec.normalize();
+
+							theta = Math.acos( THREE.Math.clamp( tangents[ i - 1 ].dot( tangents[ i ] ), - 1, 1 ) ); // clamp for floating pt errors
+
+							normals[ i ].applyMatrix4( mat.makeRotationAxis( vec, theta ) );
+
+						}
+
+						binormals[ i ].crossVectors( tangents[ i ], normals[ i ] );
+
+					}
+
+					// if the curve is closed, postprocess the vectors so the first and last normal vectors are the same
+
+					if ( closed === true ) {
+
+						theta = Math.acos( THREE.Math.clamp( normals[ 0 ].dot( normals[ segments ] ), - 1, 1 ) );
+						theta /= segments;
+
+						if ( tangents[ 0 ].dot( vec.crossVectors( normals[ 0 ], normals[ segments ] ) ) > 0 ) {
+
+							theta = - theta;
+
+						}
+
+						for ( i = 1; i <= segments; i ++ ) {
+
+							// twist a little...
+							normals[ i ].applyMatrix4( mat.makeRotationAxis( tangents[ i ], theta * i ) );
+							binormals[ i ].crossVectors( tangents[ i ], normals[ i ] );
+
+						}
+
+					}
+
+					return {
+						tangents: tangents,
+						normals: normals,
+						binormals: binormals
+					};
+
+				}
+
 				var curve = new THREE.CatmullRomCurve3( positions );
 				curve.curveType = 'catmullrom';
 				curve.mesh = new THREE.Line( geometry.clone(), new THREE.LineBasicMaterial( {
@@ -298,10 +425,10 @@
 				}
 
 
-				load( [ new THREE.Vector3( 150, 0, 0 ),
-						new THREE.Vector3( 50, 0, 0 ),
+				load( [ new THREE.Vector3( -150, 0, 0 ),
 						new THREE.Vector3( -50, 0, 0 ),
-						new THREE.Vector3( -150, 0, 0 ) ] );
+						new THREE.Vector3( 50, 0, 0 ),
+						new THREE.Vector3( 150, 0, 0 ) ] );
 
 				initFish()
 			}
@@ -336,11 +463,6 @@
 				// 	wireframe: true,
 				// 	color: 0x000000
 				// });
-				/*
-				gl_FragColor.rgb = vec3(0., 0., 1.);
-				return;
-				*/
-	
 
 				if ( ! renderer.extensions.get( "OES_texture_float" ) ) {
 					console.log("No OES_texture_float support for float textures.");
@@ -358,6 +480,13 @@
 				}
 
 				texture.needsUpdate = true;
+
+				// 
+
+				orca.children[0].geometry.computeBoundingBox()
+				bb = orca.children[0].geometry.boundingBox
+				bb.max.z - bb.min.z
+
 				*/
 
 				customMaterial = new THREE.ShaderMaterial({
@@ -369,7 +498,7 @@
 					uniform sampler2D texture;
 
 					void main() {
-						float tz = (position.z + 6.) / 10.;
+						float tz = 1. - (position.z + 6.) / 10.;
 						float textureLayers = 4.;
 						// (i + 0.5) / textureLayers
 
@@ -381,10 +510,13 @@
 
 						vec4 worldPos = modelMatrix * vec4(position, 1.);
 						worldPos = vec4(
-							vec3(worldPos.x * 0., worldPos.y * 1., worldPos.z * 1.) * basis
+							basis * 
+							vec3(worldPos.x * 0., worldPos.y * 1., worldPos.z * 1.)
 
 							// vec3(worldPos.x, worldPos.y, worldPos.z)
-							+ spline_pos, 1.);
+							+ spline_pos
+							, 1.);
+
 						vec4 mvPosition = viewMatrix * worldPos;
 						gl_Position = projectionMatrix * mvPosition;
 					}
