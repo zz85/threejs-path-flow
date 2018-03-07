@@ -404,14 +404,14 @@
 						float spinePortion;
 						float xWeight;
 						if (flow > 0) {
-							spinePortion= (position.x + spineOffset) / spineLength;
+							spinePortion = (position.x + spineOffset) / spineLength;
 							xWeight = 0.;
 						}
 						else {
 							spinePortion = 0.;
 							xWeight = 1.;
 						}
-						float mt = 1. - spinePortion * pathSegment + pathOffset;
+						float mt = spinePortion * pathSegment + pathOffset;
 						float textureLayers = 4.; // look up takes (i + 0.5) / textureLayers
 
 						vec3 spinePos = texture2D(texture, vec2(mt, (0.5) / textureLayers)).xyz;
@@ -452,7 +452,7 @@
 						scaleMat = new THREE.Matrix4()
 
 						// transMat.makeTranslation(00, 0, 125);
-						rotMat.makeRotationY( -Math.PI / 2);
+						rotMat.makeRotationY( Math.PI / 2);
 						// rotMat.makeRotationZ( -Math.PI / 2);
 
 						scaleMat.makeScale(50, 50, 50)
