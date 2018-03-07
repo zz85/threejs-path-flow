@@ -17,8 +17,8 @@
 				top: 0px;
 				width: 100%;
 				padding: 5px;
-				font-family:Monospace;
-				font-size:13px;
+				font-family: Monospace;
+				font-size: 13px;
 				text-align:center;
 			}
 		</style>
@@ -60,6 +60,7 @@
 
 			var params = {
 				path: 0,
+				flow: true,
 				uniform: false,
 				tension: 0.5,
 				centripetal: true,
@@ -127,6 +128,9 @@
 				gui = new dat.GUI();
 
 				gui.add( params, 'play' );
+				gui.add( params, 'flow' ).onChange( v => {
+					updateValue( 'flow', v );
+				} );
 				
 
 				// gui.add( params, 'tension', 0, 1 ).step( 0.01 ).onChange( function( value ) {
@@ -385,6 +389,7 @@
 							pathSegment: { type: 'f', value: 1 }, // fractional length of path
 							spineOffset: { type: 'f', value: 161 },
 							spineLength: { type: 'f', value: 400 },
+							flow: { type: 'i', value: 1 },
 					},
 					vertexShader: `
 					uniform sampler2D texture;
@@ -393,9 +398,19 @@
 					uniform float pathSegment;
 					uniform float spineOffset;
 					uniform float spineLength;
+					uniform int flow;
 
 					void main() {
-						float spinePortion = (position.x + spineOffset) / spineLength;
+						float spinePortion;
+						float xWeight;
+						if (flow > 0) {
+							spinePortion= (position.x + spineOffset) / spineLength;
+							xWeight = 0.;
+						}
+						else {
+							spinePortion = 0.;
+							xWeight = 1.;
+						}
 						float mt = 1. - spinePortion * pathSegment + pathOffset;
 						float textureLayers = 4.; // look up takes (i + 0.5) / textureLayers
 
@@ -408,7 +423,7 @@
 						vec4 worldPos = modelMatrix * vec4(position, 1.);
 						worldPos = vec4(
 							basis
-								* vec3(worldPos.x * 0., worldPos.y * 1., worldPos.z * 1.)
+								* vec3(worldPos.x * xWeight, worldPos.y * 1., worldPos.z * 1.)
 								+ spinePos
 							, 1.);
 
@@ -427,8 +442,6 @@
 				loader.load(
 					// resource URL
 					'ORCA.OBJ',
-					// '../fish.obj',
-					// '../humpback/humpback.obj',
 
 					// called when resource is loaded
 					function onLoad( object ) {
@@ -440,7 +453,10 @@
 
 						// transMat.makeTranslation(00, 0, 125);
 						rotMat.makeRotationY( -Math.PI / 2);
+						// rotMat.makeRotationZ( -Math.PI / 2);
+
 						scaleMat.makeScale(50, 50, 50)
+						// scaleMat.makeScale(20, 20, 20)
 
 						object.traverse( function ( child ) {
 							if ( child instanceof THREE.Mesh ) {
