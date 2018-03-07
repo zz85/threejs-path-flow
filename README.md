@@ -30,6 +30,14 @@ The vertex shader reads the texture, based on its offset transforms the geometry
 (More to come)
 
 
+### TODO
+
+Add Sharks
+Granny Knot animation
+Add full OBJ support
+Allow Drag and Drop editing
+
+
 ### Context
 
 You can find the full story in [this tweet](https://twitter.com/BlurSpline/status/966114594065326080).

@@ -50,7 +50,7 @@
 			var positions = [];
 			var options;
 
-			var geometry = new THREE.BoxGeometry( 20, 20, 20 );
+			var boxGeometry = new THREE.BoxGeometry( 20, 20, 20 );
 			var transformControl;
 
 			var ARC_SEGMENTS = 200;
@@ -71,8 +71,6 @@
 				play: true
 			};
 			
-			
-
 			init();
 			animate();
 
@@ -308,8 +306,11 @@
 
 				var controlPoints = [];
 				for (var i = 0; i < 5; i ++) {
+					var angle = i / 5 * Math.PI * 2;
 					controlPoints.push(
-						new THREE.Vector3( (Math.random() - 0.5) * 1500, 0,  (Math.random() - 0.5) * 1500 )
+						// new THREE.Vector3( (Math.random() - 0.5) * 1500, 0,  (Math.random() - 0.5) * 1500 )
+
+						new THREE.Vector3( Math.cos(angle) * 600, Math.random() * 400, Math.sin(angle) * 600 )
 					)
 				}
 
@@ -325,9 +326,20 @@
 				*/
 
 				initFish()
+
+				splinePosHelper = makeBox()
+				scene.add(splinePosHelper)
 			}
 
 			function initTexture() {
+				if ( ! renderer.extensions.get( "OES_texture_float" ) ) {
+					console.log("No OES_texture_float support for float textures.");
+				}
+
+				if ( renderer.capabilities.maxVertexTextures === 0 ) {
+					console.log("No support for vertex shader textures.");
+				}
+
 				const height = 4;
 
 				const dataArray = new Float32Array( TEXTURE_WIDTH * height * BITS );
@@ -363,14 +375,6 @@
 				// 	color: 0x000000
 				// });
 
-				if ( ! renderer.extensions.get( "OES_texture_float" ) ) {
-					console.log("No OES_texture_float support for float textures.");
-				}
-
-				if ( renderer.capabilities.maxVertexTextures === 0 ) {
-					console.log("No support for vertex shader textures.");
-				}
-
 				texture = initTexture();
 
 				customMaterial = new THREE.ShaderMaterial({
@@ -391,7 +395,8 @@
 					uniform float spineLength;
 
 					void main() {
-						float mt = 1. - (position.x + spineOffset) / spineLength * pathSegment + pathOffset;
+						float spinePortion = (position.x + spineOffset) / spineLength;
+						float mt = 1. - spinePortion * pathSegment + pathOffset;
 						float textureLayers = 4.; // look up takes (i + 0.5) / textureLayers
 
 						vec3 spinePos = texture2D(texture, vec2(mt, (0.5) / textureLayers)).xyz;
@@ -419,28 +424,30 @@
 				})
 
 				var loader = new THREE.OBJLoader();
-				// load a resource
 				loader.load(
 					// resource URL
 					'ORCA.OBJ',
+					// '../fish.obj',
+					// '../humpback/humpback.obj',
+
 					// called when resource is loaded
 					function onLoad( object ) {
 						window.orca = object;
 						
+						transMat = new THREE.Matrix4()
 						rotMat = new THREE.Matrix4()
-						rotMat.makeRotationY( -Math.PI / 2);
 						scaleMat = new THREE.Matrix4()
+
+						// transMat.makeTranslation(00, 0, 125);
+						rotMat.makeRotationY( -Math.PI / 2);
 						scaleMat.makeScale(50, 50, 50)
 
 						object.traverse( function ( child ) {
 							if ( child instanceof THREE.Mesh ) {
-								child.geometry.applyMatrix(scaleMat);
 								child.geometry.applyMatrix(rotMat);
+								child.geometry.applyMatrix(scaleMat);
+								child.geometry.applyMatrix(transMat);
 								
-								// child.scale.multiplyScalar(50);
-								// child.position.y = 100;
-								// child.rotation.y = -Math.PI / 2;
-
 								child.material = customMaterial
 								// child.castShadow = true
 
@@ -454,6 +461,8 @@
 							geo.computeBoundingBox();
 							return geo.boundingBox;
 						});
+
+						console.log('boundingbox', bbs);
 
 						// use x-axis aligned
 						min = Math.min(...bbs.map(bb => bb.min.x))
@@ -495,17 +504,16 @@
 				splines.centripetal.arcLengthDivisions = 200;
 				splines.centripetal.updateArcLengths()
 				splineLen = splines.centripetal.getLength()
-				f = len / splineLen
+				var pathSegment = len / splineLen // should clam max to 1
 
 				updateValue('spineOffset', 0);
-				updateValue('pathSegment', f);
+				updateValue('pathSegment', pathSegment);
 
-				console.log(f);
-
+				var splineCurve = splines.centripetal;
 				// uniform chordal centripetal
-				var points = splines.centripetal.getSpacedPoints(TEXTURE_WIDTH - 1);
+				var points = splineCurve.getSpacedPoints(TEXTURE_WIDTH - 1);
 				// getPoints() - unequal arc lengths
-				var frenetFrames = splines.centripetal.computeFrenetFrames(TEXTURE_WIDTH - 1, params.closed);
+				var frenetFrames = splineCurve.computeFrenetFrames(TEXTURE_WIDTH - 1, params.closed);
 				// console.log(frenetFrames);
 
 				// console.log('points', points);
@@ -522,12 +530,12 @@
 
 				texture.needsUpdate = true;
 
-			}			
+			}
 
-			function addSplineObject( position ) {
+			function makeBox( position ) {
 
 				var material = new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } );
-				var object = new THREE.Mesh( geometry, material );
+				var object = new THREE.Mesh( boxGeometry, material );
 
 				if ( position ) {
 
@@ -544,6 +552,14 @@
 				object.castShadow = true;
 				object.receiveShadow = true;
 				scene.add( object );
+
+				return object;
+
+			}
+
+			function addSplineObject( position ) {
+
+				var object = makeBox( position );
 				splineHelperObjects.push( object );
 				return object;
 
@@ -566,6 +582,7 @@
 					return;
 
 				}
+
 				splinePointsLength --;
 				positions.pop();
 				scene.remove( splineHelperObjects.pop() );
@@ -650,11 +667,17 @@
 					params.path %= 1;
 					gui.updateDisplay();
 					updateValue('pathOffset', params.path);
+
+					
+					splinePosHelper.position.copy(
+						splines.centripetal.getPointAt(params.path)
+					)
 				}
 
 			}
 
 			function render() {
+				
 
 				splines.uniform.mesh.visible = params.uniform;
 				splines.centripetal.mesh.visible = params.centripetal;
