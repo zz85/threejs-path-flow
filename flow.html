@@ -61,15 +61,28 @@
 			var params = {
 				path: 0,
 				flow: true,
+				
+				/**/
 				uniform: false,
 				tension: 0.5,
 				centripetal: true,
 				chordal: false,
+				
 				addPoint: addPoint,
 				removePoint: removePoint,
 				exportSpline: exportSpline,
 				closed: true,
-				play: true
+				play: true,
+
+				scale: 20,
+
+				rotationX: 0,
+				rotationY: 0,
+				rotationZ: 0,
+
+				translateX: 0,
+				translateY: 0,
+				translateZ: 0,
 			};
 			
 			init();
@@ -152,7 +165,40 @@
 				gui.add( params, 'addPoint' );
 				gui.add( params, 'removePoint' );
 				gui.add( params, 'exportSpline' );
-				
+
+				gui.add( params, 'scale', 0.1, 400 ).step( 0.01 ).onChange( setModel );
+
+				gui.add( params, 'rotationX', -1, 1 ).step( 0.25 ).onChange( setModel );
+				gui.add( params, 'rotationY', -1, 1 ).step( 0.25 ).onChange( setModel );
+				gui.add( params, 'rotationZ', -1, 1 ).step( 0.25 ).onChange( setModel );
+
+				gui.add( params, 'translateX', -1000, 1000 ).step( 0.01 ).onChange( setModel );
+				gui.add( params, 'translateY', -1000, 1000 ).step( 0.01 ).onChange( setModel );
+				gui.add( params, 'translateZ', -1000, 1000 ).step( 0.01 ).onChange( setModel );
+
+				function setModel() {
+					orca.scale.setScalar( params.scale )
+					orca.rotation.x = params.rotationX * Math.PI;
+					orca.rotation.y = params.rotationY * Math.PI;
+					orca.rotation.z = params.rotationZ * Math.PI;
+					orca.translate.x = params.translateX;
+					orca.translate.y = params.translateY;
+					orca.translate.z = params.translateZ;
+
+
+					orca.traverse( function ( child ) {
+						if ( child instanceof THREE.Mesh ) {
+							// child.scale.setScalar( params.scale )
+							// child.rotation.x = params.rotationX * Math.PI;
+							// child.rotation.y = params.rotationY * Math.PI;
+							// child.rotation.z = params.rotationZ * Math.PI;
+							// child.translate.x = params.translateX;
+							// child.translate.y = params.translateY;
+							// child.translate.z = params.translateZ;
+						}
+					} );
+
+				}
 
 				gui.open();
 
@@ -442,6 +488,7 @@
 					function onLoad( object ) {
 						window.orca = object;
 						
+						/*
 						transMat = new THREE.Matrix4()
 						rotMat = new THREE.Matrix4()
 						scaleMat = new THREE.Matrix4()
@@ -451,14 +498,14 @@
 						// rotMat.makeRotationZ( -Math.PI / 2);
 
 						scaleMat.makeScale(50, 50, 50)
-						// scaleMat.makeScale(20, 20, 20)
+						child.geometry.applyMatrix(rotMat);
+						child.geometry.applyMatrix(scaleMat);
+						child.geometry.applyMatrix(transMat);
+						*/
+
 
 						object.traverse( function ( child ) {
 							if ( child instanceof THREE.Mesh ) {
-								child.geometry.applyMatrix(rotMat);
-								child.geometry.applyMatrix(scaleMat);
-								child.geometry.applyMatrix(transMat);
-								
 								child.material = customMaterial
 								// child.castShadow = true
 
