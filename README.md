@@ -6,7 +6,7 @@ It is called by different names (eg. "Curve Modifier" in Blender, Path-based Def
 
 It's quite a work in progress and renders only in wireframe now.
 
-Feel free to hack around with the code.
+Feel free to hack the code.
 
 ### Examples
 
@@ -29,14 +29,21 @@ The vertex shader reads the texture, based on its offset transforms the geometry
 
 (More to come)
 
+### Features
+
+- Vertex calculations
+- Minimizing twisting effect
+- Equi-distance sampling of points
+- Flow - Bend/Rigid option
 
 ### TODO
 
-Add Sharks
-Granny Knot animation
-Add full OBJ support
-Allow Drag and Drop editing
-
+- [ ] Add Sharks
+- [ ] Granny Knot animation
+- [ ] Add OBJ texture support
+- [ ] Allow Drag and Drop loading
+- [ ] Add follow cursor
+- [ ] Make flow a paramter
 
 ### Context
 

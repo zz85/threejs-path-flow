@@ -43,6 +43,10 @@
 			var BITS = 3;
 			var TEXTURE_WIDTH = 256; // points on the texture
 
+			var orca;
+			var texture;
+			var modifierObject = new THREE.Object3D();
+
 			var container, stats;
 			var camera, scene, renderer;
 			var splineHelperObjects = [], splineOutline;
@@ -177,27 +181,17 @@
 				gui.add( params, 'translateZ', -1000, 1000 ).step( 0.01 ).onChange( setModel );
 
 				function setModel() {
-					orca.scale.setScalar( params.scale )
-					orca.rotation.x = params.rotationX * Math.PI;
-					orca.rotation.y = params.rotationY * Math.PI;
-					orca.rotation.z = params.rotationZ * Math.PI;
-					orca.translate.x = params.translateX;
-					orca.translate.y = params.translateY;
-					orca.translate.z = params.translateZ;
+					modifierObject.scale.setScalar( params.scale )
+					modifierObject.rotation.x = params.rotationX * Math.PI;
+					modifierObject.rotation.y = params.rotationY * Math.PI;
+					modifierObject.rotation.z = params.rotationZ * Math.PI;
+					modifierObject.translate.x = params.translateX;
+					modifierObject.translate.y = params.translateY;
+					modifierObject.translate.z = params.translateZ;
 
-
-					orca.traverse( function ( child ) {
-						if ( child instanceof THREE.Mesh ) {
-							// child.scale.setScalar( params.scale )
-							// child.rotation.x = params.rotationX * Math.PI;
-							// child.rotation.y = params.rotationY * Math.PI;
-							// child.rotation.z = params.rotationZ * Math.PI;
-							// child.translate.x = params.translateX;
-							// child.translate.y = params.translateY;
-							// child.translate.z = params.translateZ;
-						}
-					} );
-
+					orca.matrixAutoUpdate = false
+					modifierObject.updateMatrix()
+					orca.matrix.copy(modifierObject.matrix);
 				}
 
 				gui.open();
@@ -486,7 +480,7 @@
 
 					// called when resource is loaded
 					function onLoad( object ) {
-						window.orca = object;
+						orca = object;
 						
 						/*
 						transMat = new THREE.Matrix4()
@@ -528,7 +522,7 @@
 						console.log(len, min);
 
 						updateValue('spineOffset', -min);
-						updateValue('spineLength', len); // 
+						updateValue('spineLength', len);
 
 						scene.add( object );
 						
@@ -557,7 +551,7 @@
 			}
 
 			function updateSplineTexture() {
-				if (!window.texture) return;
+				if (!texture) return;
 				
 				splines.centripetal.arcLengthDivisions = 200;
 				splines.centripetal.updateArcLengths()
