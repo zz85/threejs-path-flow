@@ -400,19 +400,15 @@
 					uniform float spineLength;
 					uniform int flow;
 
+					float textureLayers = 4.; // look up takes (i + 0.5) / textureLayers
+
 					void main() {
-						float spinePortion;
-						float xWeight;
-						if (flow > 0) {
-							spinePortion = (position.x + spineOffset) / spineLength;
-							xWeight = 0.;
-						}
-						else {
-							spinePortion = 0.;
-							xWeight = 1.;
-						}
+						vec4 worldPos = modelMatrix * vec4(position, 1.);
+
+						bool bend = flow > 0;
+						float spinePortion = bend ? (worldPos.x + spineOffset) / spineLength : 0.;
+						float xWeight = bend ? 0. : 1.;
 						float mt = spinePortion * pathSegment + pathOffset;
-						float textureLayers = 4.; // look up takes (i + 0.5) / textureLayers
 
 						vec3 spinePos = texture2D(texture, vec2(mt, (0.5) / textureLayers)).xyz;
 						vec3 a = texture2D(texture, vec2(mt, (1. + 0.5) / textureLayers)).xyz;
@@ -420,7 +416,6 @@
 						vec3 c = texture2D(texture, vec2(mt, (3. + 0.5) / textureLayers)).xyz;
 						mat3 basis = mat3(a, b, c);
 
-						vec4 worldPos = modelMatrix * vec4(position, 1.);
 						worldPos = vec4(
 							basis
 								* vec3(worldPos.x * xWeight, worldPos.y * 1., worldPos.z * 1.)
