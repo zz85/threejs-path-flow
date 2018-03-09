@@ -34,6 +34,7 @@
 		<script src="OrbitControls.js"></script>
 		<script src="TransformControls.js"></script>
 
+		<script src="loader.js"></script>
 		<script src="OBJLoader.js"></script>
 
 		<script src="stats.min.js"></script>
@@ -46,6 +47,8 @@
 			var orca;
 			var texture;
 			var modifierObject = new THREE.Object3D();
+			var referenceGeometry = new THREE.Geometry();
+			referenceGeometry.vertices = Array(2).fill().map(_ => new THREE.Vector3());
 
 			var container, stats;
 			var camera, scene, renderer;
@@ -65,13 +68,13 @@
 			var params = {
 				path: 0,
 				flow: true,
-				
+
 				/**/
 				uniform: false,
 				tension: 0.5,
 				centripetal: true,
 				chordal: false,
-				
+
 				addPoint: addPoint,
 				removePoint: removePoint,
 				exportSpline: exportSpline,
@@ -81,14 +84,14 @@
 				scale: 20,
 
 				rotationX: 0,
-				rotationY: 0,
+				rotationY: 0.5,
 				rotationZ: 0,
 
 				translateX: 0,
 				translateY: 0,
 				translateZ: 0,
 			};
-			
+
 			init();
 			animate();
 
@@ -146,53 +149,39 @@
 
 				gui.add( params, 'play' );
 				gui.add( params, 'flow' ).onChange( v => {
-					updateValue( 'flow', v );
+					updateUniform( 'flow', v );
 				} );
-				
+
 
 				// gui.add( params, 'tension', 0, 1 ).step( 0.01 ).onChange( function( value ) {
 				// 	splines.uniform.tension = value;
 				// 	splines.centripetal.tension = value;
 				// 	updateSplineOutline();
-				// });                
+				// });
 				// gui.add( params, 'centripetal' );
 				// gui.add( params, 'chordal' );
 
 				// gui.add( params, 'closed' ).onChange((v) => {
 				// 	splines.centripetal.closed = v;
 				// })
-				
+
 				gui.add( params, 'path', 0, 1 ).step( 0.01 ).onChange( function( value ) {
-					updateValue('pathOffset', value);
+					updateUniform('pathOffset', value);
 				});
 
 				gui.add( params, 'addPoint' );
 				gui.add( params, 'removePoint' );
 				gui.add( params, 'exportSpline' );
 
-				gui.add( params, 'scale', 0.1, 400 ).step( 0.01 ).onChange( setModel );
+				gui.add( params, 'scale', 0.1, 400 ).step( 0.01 ).onChange( updateModel );
 
-				gui.add( params, 'rotationX', -1, 1 ).step( 0.25 ).onChange( setModel );
-				gui.add( params, 'rotationY', -1, 1 ).step( 0.25 ).onChange( setModel );
-				gui.add( params, 'rotationZ', -1, 1 ).step( 0.25 ).onChange( setModel );
+				gui.add( params, 'rotationX', -1, 1 ).step( 0.25 ).onChange( updateModel );
+				gui.add( params, 'rotationY', -1, 1 ).step( 0.25 ).onChange( updateModel );
+				gui.add( params, 'rotationZ', -1, 1 ).step( 0.25 ).onChange( updateModel );
 
-				gui.add( params, 'translateX', -1000, 1000 ).step( 0.01 ).onChange( setModel );
-				gui.add( params, 'translateY', -1000, 1000 ).step( 0.01 ).onChange( setModel );
-				gui.add( params, 'translateZ', -1000, 1000 ).step( 0.01 ).onChange( setModel );
-
-				function setModel() {
-					modifierObject.scale.setScalar( params.scale )
-					modifierObject.rotation.x = params.rotationX * Math.PI;
-					modifierObject.rotation.y = params.rotationY * Math.PI;
-					modifierObject.rotation.z = params.rotationZ * Math.PI;
-					modifierObject.translate.x = params.translateX;
-					modifierObject.translate.y = params.translateY;
-					modifierObject.translate.z = params.translateZ;
-
-					orca.matrixAutoUpdate = false
-					modifierObject.updateMatrix()
-					orca.matrix.copy(modifierObject.matrix);
-				}
+				gui.add( params, 'translateX', -1000, 1000 ).step( 0.01 ).onChange( updateModel );
+				gui.add( params, 'translateY', -1000, 1000 ).step( 0.01 ).onChange( updateModel );
+				gui.add( params, 'translateZ', -1000, 1000 ).step( 0.01 ).onChange( updateModel );
 
 				gui.open();
 
@@ -346,7 +335,7 @@
 					scene.add( spline.mesh );
 
 				}
-				
+
 
 				var controlPoints = [];
 				for (var i = 0; i < 5; i ++) {
@@ -366,7 +355,7 @@
 						new THREE.Vector3( -50 * 4, 0, 0 ),
 						new THREE.Vector3( 50 * 4, 0, 0 ),
 						new THREE.Vector3( 150 * 4, 0, 0 ) ] );
-						
+
 				*/
 
 				initFish()
@@ -473,62 +462,73 @@
 					`
 				})
 
+				function onLoad( object ) {
+					if (orca) scene.remove(orca);
+					orca = object;
+
+					/*
+					transMat = new THREE.Matrix4()
+					rotMat = new THREE.Matrix4()
+					scaleMat = new THREE.Matrix4()
+
+					// transMat.makeTranslation(00, 0, 125);
+					rotMat.makeRotationY( Math.PI / 2);
+					// rotMat.makeRotationZ( -Math.PI / 2);
+
+					scaleMat.makeScale(50, 50, 50)
+					child.geometry.applyMatrix(rotMat);
+					child.geometry.applyMatrix(scaleMat);
+					child.geometry.applyMatrix(transMat);
+					*/
+
+
+					object.traverse( function ( child ) {
+						if ( child instanceof THREE.Mesh ) {
+							child.material = customMaterial
+							// child.castShadow = true
+
+							// child.material.map = texture;
+							// child.material.color = 0x000000;
+						}
+					} );
+
+					geoms = orca.children.map(child => child.geometry);
+					bbs = geoms.map(geo => {
+						geo.computeBoundingBox();
+						return geo.boundingBox;
+					});
+
+					console.log('boundingbox', bbs);
+
+					referenceGeometry.vertices[0].set(
+						Math.min(...bbs.map(bb => bb.min.x)),
+						Math.min(...bbs.map(bb => bb.min.y)),
+						Math.min(...bbs.map(bb => bb.min.z))
+					)
+
+					referenceGeometry.vertices[1].set(
+						Math.max(...bbs.map(bb => bb.max.x)),
+						Math.max(...bbs.map(bb => bb.max.y)),
+						Math.max(...bbs.map(bb => bb.max.z))
+					)
+
+					updateModel();
+
+					scene.add( object );
+				}
+
+				activate(null, (moo) => {
+					console.log(moo);
+					onLoad(moo);
+				});
+
 				var loader = new THREE.OBJLoader();
 				loader.load(
 					// resource URL
 					'ORCA.OBJ',
 
 					// called when resource is loaded
-					function onLoad( object ) {
-						orca = object;
-						
-						/*
-						transMat = new THREE.Matrix4()
-						rotMat = new THREE.Matrix4()
-						scaleMat = new THREE.Matrix4()
-
-						// transMat.makeTranslation(00, 0, 125);
-						rotMat.makeRotationY( Math.PI / 2);
-						// rotMat.makeRotationZ( -Math.PI / 2);
-
-						scaleMat.makeScale(50, 50, 50)
-						child.geometry.applyMatrix(rotMat);
-						child.geometry.applyMatrix(scaleMat);
-						child.geometry.applyMatrix(transMat);
-						*/
-
-
-						object.traverse( function ( child ) {
-							if ( child instanceof THREE.Mesh ) {
-								child.material = customMaterial
-								// child.castShadow = true
-
-								// child.material.map = texture;
-								// child.material.color = 0x000000;
-							}
-						} );
-
-						geoms = orca.children.map(child => child.geometry);
-						bbs = geoms.map(geo => {
-							geo.computeBoundingBox();
-							return geo.boundingBox;
-						});
-
-						console.log('boundingbox', bbs);
-
-						// use x-axis aligned
-						min = Math.min(...bbs.map(bb => bb.min.x))
-						len = Math.max(...bbs.map(bb => bb.max.x)) - min
-						console.log(len, min);
-
-						updateValue('spineOffset', -min);
-						updateValue('spineLength', len);
-
-						scene.add( object );
-						
-						updateSplineOutline()
-
-					},
+					onLoad,
 					// called when loading is in progresses
 					function onProgress( xhr ) {
 
@@ -545,21 +545,48 @@
 			}
 
 			/****************************/
-			
-			function updateValue(name, v) {
+
+			function updateModel() {
+				modifierObject.scale.setScalar( params.scale )
+				modifierObject.rotation.x = params.rotationX * Math.PI;
+				modifierObject.rotation.y = params.rotationY * Math.PI;
+				modifierObject.rotation.z = params.rotationZ * Math.PI;
+				modifierObject.translate.x = params.translateX;
+				modifierObject.translate.y = params.translateY;
+				modifierObject.translate.z = params.translateZ;
+
+				orca.matrixAutoUpdate = false
+				modifierObject.updateMatrix()
+				orca.matrix.copy(modifierObject.matrix);
+
+				moo = referenceGeometry.clone().applyMatrix(modifierObject.matrix)
+				console.log(moo);
+
+				// use x-axis aligned
+				min = Math.min(...moo.vertices.map(v => v.x))
+				len = Math.max(...moo.vertices.map(v => v.x)) - min
+				console.log(len, min);
+
+				updateUniform('spineOffset', -min);
+				updateUniform('spineLength', len);
+
+				updateSplineOutline()
+			}
+
+			function updateUniform(name, v) {
 				customMaterial.uniforms[name].value = v;
 			}
 
 			function updateSplineTexture() {
 				if (!texture) return;
-				
+
 				splines.centripetal.arcLengthDivisions = 200;
 				splines.centripetal.updateArcLengths()
 				splineLen = splines.centripetal.getLength()
 				var pathSegment = len / splineLen // should clam max to 1
 
-				updateValue('spineOffset', 0);
-				updateValue('pathSegment', pathSegment);
+				// updateUniform('spineOffset', 0);
+				updateUniform('pathSegment', pathSegment);
 
 				var splineCurve = splines.centripetal;
 				// uniform chordal centripetal
@@ -661,8 +688,9 @@
 
 					splineMesh.geometry.verticesNeedUpdate = true;
 
-					updateSplineTexture();
 				}
+
+				updateSplineTexture();
 
 			}
 
@@ -713,14 +741,14 @@
 				render();
 				stats.update();
 				transformControl.update();
-				
+
 				if (params.play) {
 					params.path += 0.005;
 					params.path %= 1;
 					gui.updateDisplay();
-					updateValue('pathOffset', params.path);
+					updateUniform('pathOffset', params.path);
 
-					
+
 					splinePosHelper.position.copy(
 						splines.centripetal.getPointAt(params.path)
 					)
@@ -729,7 +757,6 @@
 			}
 
 			function render() {
-				
 
 				splines.uniform.mesh.visible = params.uniform;
 				splines.centripetal.mesh.visible = params.centripetal;

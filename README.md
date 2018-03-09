@@ -43,7 +43,7 @@ The vertex shader reads the texture, based on its offset transforms the geometry
 - [ ] Add OBJ texture support
 - [ ] Allow Drag and Drop loading
 - [ ] Add follow cursor
-- [ ] Make flow a paramter
+- [ ] Make flow a parameter
 
 ### Context
 
