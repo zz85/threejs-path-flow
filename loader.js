@@ -1,4 +1,5 @@
 function activate( target, callback ) {
+
     target = target || document;
 
     target.addEventListener( 'dragover', function ( event ) {

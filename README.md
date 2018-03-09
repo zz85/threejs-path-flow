@@ -31,19 +31,21 @@ The vertex shader reads the texture, based on its offset transforms the geometry
 
 ### Features
 
-- Vertex calculations
-- Minimizing twisting effect
-- Equi-distance sampling of points
+- Bend vertex calculations
+- Minimizing twisting effect (Frenet frames)
+- Equi-distance sampling of points (From Curve)
 - Flow - Bend/Rigid option
+- Obj file loading
+- Drag and drop
 
 ### TODO
 
 - [ ] Add Sharks
 - [ ] Granny Knot animation
 - [ ] Add OBJ texture support
-- [ ] Allow Drag and Drop loading
 - [ ] Add follow cursor
 - [ ] Make flow a parameter
+- [ ] Shading
 
 ### Context
 
