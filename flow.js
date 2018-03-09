@@ -38,19 +38,14 @@ function setTextureValue(index, x, y, z, o) {
     data[index * BITS + i + 2] = z;
 }
 
-function initPathShader() {
-    // TODO Texture Loading
+function modifyShader( material ) {
+    if (material.__ok) return;
+    material.__ok = true;
 
-    customMaterial = new THREE.MeshPhongMaterial({
-    	// wireframe: true,
-        // color: 0x000000
-        color: 0x999999
-    });
+    material.onBeforeCompile = ( shader ) => {
 
-    texture = initTexture();
-
-    customMaterial.onBeforeCompile = ( shader ) => {
-        console.log('onBeforeCompile', shader);
+        if (shader.__modified) return;
+        shader.__modified = true;
 
         uniforms = Object.assign(shader.uniforms, {
             texture: { value: texture },
@@ -80,7 +75,7 @@ function initPathShader() {
         `
 
         vertexShader = vertexShader.replace(
-            '#include <begin_vertex>',
+            '#include <defaultnormal_vertex>',
             `
             vec4 worldPos = modelMatrix * vec4(position, 1.);
 
@@ -98,14 +93,13 @@ function initPathShader() {
             vec3 transformed = basis
                 * vec3(worldPos.x * xWeight, worldPos.y * 1., worldPos.z * 1.)
                 + spinePos;
-            
+
             vec3 transformedNormal = normalMatrix * (basis * objectNormal);
             `
-        )
-
-        vertexShader = vertexShader.replace( '#include <begin_vertex>', '' );
-
-        vertexShader = vertexShader.replace(
+        ).replace(
+            '#include <begin_vertex>',
+            ''
+        ).replace(
             '#include <project_vertex>',
             `
             vec4 mvPosition = viewMatrix * vec4( transformed, 1.0 );
@@ -115,9 +109,21 @@ function initPathShader() {
         )
 
         shader.vertexShader = vertexShader
-        console.log(vertexShader);
-
+        console.log('Final', vertexShader);
     }
+}
+
+function initPathShader() {
+    // TODO Texture Loading
+    customMaterial = new THREE.MeshPhongMaterial({
+    	// wireframe: true,
+        // color: 0x000000
+        color: 0x999999
+    });
+
+    modifyShader( customMaterial );
+
+    texture = initTexture();
 
     activate(null, (moo) => {
         console.log(moo);
@@ -170,8 +176,12 @@ function onLoad( object ) {
     object.traverse( function ( child ) {
         if ( child instanceof THREE.Mesh ) {
             console.log('old material', child.material);
+
+
+            // modifyShader( child.material );
+
             child.material = customMaterial
-            // child.castShadow = true
+            child.castShadow = true
 
             // child.material.map = texture;
             // child.material.color = 0x000000;
