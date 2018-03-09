@@ -99,14 +99,14 @@ function initPathShader() {
                 * vec3(worldPos.x * xWeight, worldPos.y * 1., worldPos.z * 1.)
                 + spinePos;
             
-            // vNormal = vNormal * m
+            vec3 transformedNormal = normalMatrix * (basis * objectNormal);
             `
         )
 
+        vertexShader = vertexShader.replace( '#include <begin_vertex>', '' );
 
         vertexShader = vertexShader.replace(
             '#include <project_vertex>',
-            // 'vec4 mvPosition = modelViewMatrix * vec4( transformed, 1.0 );',
             `
             vec4 mvPosition = viewMatrix * vec4( transformed, 1.0 );
             // vec4 mvPosition = viewMatrix * worldPos;
