@@ -48,16 +48,21 @@ function initPathShader() {
 
     texture = initTexture();
 
+    uniforms = THREE.UniformsUtils.clone( THREE.ShaderLib.standard.uniforms );
+    uniforms = Object.assign(uniforms, {
+        texture: { value: texture },
+        pathOffset: { type: 'f', value: 0 }, // time of path curve
+        pathSegment: { type: 'f', value: 1 }, // fractional length of path
+        spineOffset: { type: 'f', value: 161 },
+        spineLength: { type: 'f', value: 400 },
+        flow: { type: 'i', value: 1 },
+    });
+
+    console.log('uniforms', uniforms);
+
     customMaterial = new THREE.ShaderMaterial({
         wireframe: true,
-        uniforms: {
-                texture: { value: texture },
-                pathOffset: { type: 'f', value: 0 }, // time of path curve
-                pathSegment: { type: 'f', value: 1 }, // fractional length of path
-                spineOffset: { type: 'f', value: 161 },
-                spineLength: { type: 'f', value: 400 },
-                flow: { type: 'i', value: 1 },
-        },
+        uniforms,
         vertexShader: `
         uniform sampler2D texture;
 
@@ -150,6 +155,7 @@ function onLoad( object ) {
 
     object.traverse( function ( child ) {
         if ( child instanceof THREE.Mesh ) {
+            console.log('old material', child.material);
             child.material = customMaterial
             // child.castShadow = true
 
