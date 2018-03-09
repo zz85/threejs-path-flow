@@ -41,29 +41,31 @@ function setTextureValue(index, x, y, z, o) {
 function initPathShader() {
     // TODO Texture Loading
 
-    // customMaterial = new THREE.MeshBasicMaterial({
-    // 	wireframe: true,
-    // 	color: 0x000000
-    // });
+    customMaterial = new THREE.MeshPhongMaterial({
+    	// wireframe: true,
+        // color: 0x000000
+        color: 0x999999
+    });
 
     texture = initTexture();
 
-    uniforms = THREE.UniformsUtils.clone( THREE.ShaderLib.standard.uniforms );
-    uniforms = Object.assign(uniforms, {
-        texture: { value: texture },
-        pathOffset: { type: 'f', value: 0 }, // time of path curve
-        pathSegment: { type: 'f', value: 1 }, // fractional length of path
-        spineOffset: { type: 'f', value: 161 },
-        spineLength: { type: 'f', value: 400 },
-        flow: { type: 'i', value: 1 },
-    });
+    customMaterial.onBeforeCompile = ( shader ) => {
+        console.log('onBeforeCompile', shader);
 
-    console.log('uniforms', uniforms);
+        uniforms = Object.assign(shader.uniforms, {
+            texture: { value: texture },
+            pathOffset: { type: 'f', value: 0 }, // time of path curve
+            pathSegment: { type: 'f', value: 1 }, // fractional length of path
+            spineOffset: { type: 'f', value: 161 },
+            spineLength: { type: 'f', value: 400 },
+            flow: { type: 'i', value: 1 },
+        });
 
-    customMaterial = new THREE.ShaderMaterial({
-        wireframe: true,
-        uniforms,
-        vertexShader: `
+        for (var k in bufferUniforms) {
+            updateUniform(k, bufferUniforms[k]);
+        }
+
+        vertexShader = `
         uniform sampler2D texture;
 
         uniform float pathOffset;
@@ -74,7 +76,12 @@ function initPathShader() {
 
         float textureLayers = 4.; // look up takes (i + 0.5) / textureLayers
 
-        void main() {
+        ${shader.vertexShader}
+        `
+
+        vertexShader = vertexShader.replace(
+            '#include <begin_vertex>',
+            `
             vec4 worldPos = modelMatrix * vec4(position, 1.);
 
             bool bend = flow > 0;
@@ -88,22 +95,29 @@ function initPathShader() {
             vec3 c = texture2D(texture, vec2(mt, (3. + 0.5) / textureLayers)).xyz;
             mat3 basis = mat3(a, b, c);
 
-            worldPos = vec4(
-                basis
-                    * vec3(worldPos.x * xWeight, worldPos.y * 1., worldPos.z * 1.)
-                    + spinePos
-                , 1.);
+            vec3 transformed = basis
+                * vec3(worldPos.x * xWeight, worldPos.y * 1., worldPos.z * 1.)
+                + spinePos;
+            
+            // vNormal = vNormal * m
+            `
+        )
 
-            vec4 mvPosition = viewMatrix * worldPos;
+
+        vertexShader = vertexShader.replace(
+            '#include <project_vertex>',
+            // 'vec4 mvPosition = modelViewMatrix * vec4( transformed, 1.0 );',
+            `
+            vec4 mvPosition = viewMatrix * vec4( transformed, 1.0 );
+            // vec4 mvPosition = viewMatrix * worldPos;
             gl_Position = projectionMatrix * mvPosition;
-        }
-        `,
-        fragmentShader: `
-        void main() {
-            gl_FragColor.rgb = vec3(0.);
-        }
-        `
-    })
+            `
+        )
+
+        shader.vertexShader = vertexShader
+        console.log(vertexShader);
+
+    }
 
     activate(null, (moo) => {
         console.log(moo);

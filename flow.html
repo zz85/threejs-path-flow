@@ -48,6 +48,9 @@
 
 			var orca;
 			var texture;
+			var uniforms;
+			var bufferUniforms = {};
+
 			var modifierObject = new THREE.Object3D();
 			var referenceGeometry = new THREE.Geometry();
 			referenceGeometry.vertices = Array(2).fill().map(_ => new THREE.Vector3());
@@ -108,7 +111,7 @@
 				camera.position.set( 0, 250, 1000 );
 				scene.add( camera );
 
-				scene.add( new THREE.AmbientLight( 0xf0f0f0 ) );
+				scene.add( new THREE.AmbientLight( 0x303030 ) );
 				var light = new THREE.SpotLight( 0xffffff, 1.5 );
 				light.position.set( 0, 1500, 200 );
 				light.castShadow = true;
@@ -396,7 +399,12 @@
 			}
 
 			function updateUniform(name, v) {
-				customMaterial.uniforms[name].value = v;
+				if (!uniforms) {
+					bufferUniforms[name] = v;
+					console.log('fail', name);
+					return
+				}
+				uniforms[name].value = v;
 			}
 
 			function updateSplineTexture() {
