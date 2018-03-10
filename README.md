@@ -2,11 +2,13 @@
 
 ## About
 
-It is called by different names (eg. "Curve Modifier" in Blender, Path-based Deformation, Bend Modifier), but what this does is that it can take a mesh and bend it along a curve or a path.
+It is called by different names (eg. "Curve Modifier" in Blender, Path-based Deformation, Bend Modifier), but what this does is that it can take a mesh and bends it along a curve or a path.
 
-It's quite a work in progress and renders only in wireframe now.
+It's quite a work in progress ~~and renders only in wireframe now~~.
 
 Feel free to hack the code.
+
+![flow-path-3](https://user-images.githubusercontent.com/314997/37237344-faf19dac-244c-11e8-9bca-42c431e5f3f3.gif)
 
 ### Examples
 
@@ -14,9 +16,11 @@ Feel free to hack the code.
 
 [Bend](https://zz85.github.io/threejs-path-flow/bend.html) - Bend a mesh along another curve
 
-### Credits
+### Links
 
-Killer Whale Orca 3D Model - [https://free3d.com/3d-model/killer-whale-89887.html](https://free3d.com/3d-model/killer-whale-89887.html)
+Credits: Killer Whale Orca 3D Model - [https://free3d.com/3d-model/killer-whale-89887.html](https://free3d.com/3d-model/killer-whale-89887.html)
+
+[three.js issue](https://github.com/mrdoob/three.js/issues/13553)
 
 
 ### Technical details
@@ -35,17 +39,18 @@ The vertex shader reads the texture, based on its offset transforms the geometry
 - Minimizing twisting effect (Frenet frames)
 - Equi-distance sampling of points (From Curve)
 - Flow - Bend/Rigid option
-- Obj file loading
-- Drag and drop
+- OBJ file loading (via Drag and drop)
 
 ### TODO
 
-- [ ] Add Sharks
+- [ ] ~~Add Sharks~~ Multi-model
 - [ ] Granny Knot animation
 - [ ] Add OBJ texture support
 - [ ] Add follow cursor
 - [ ] Make flow a parameter
 - [ ] Shading
+- [ ] [Gif Support](https://github.com/jnordberg/gif.js/)
+- [ ] Better rotation/transform controls
 
 ### Context
 
