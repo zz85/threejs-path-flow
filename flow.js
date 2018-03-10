@@ -109,7 +109,7 @@ function modifyShader( material ) {
         )
 
         shader.vertexShader = vertexShader
-        console.log('Final', vertexShader);
+        console.log('Current shader template', vertexShader);
     }
 }
 
@@ -176,7 +176,6 @@ function onLoad( object ) {
     object.traverse( function ( child ) {
         if ( child instanceof THREE.Mesh ) {
             console.log('old material', child.material);
-
 
             // modifyShader( child.material );
 

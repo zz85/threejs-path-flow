@@ -83,6 +83,7 @@
 				addPoint: addPoint,
 				removePoint: removePoint,
 				exportSpline: exportSpline,
+
 				closed: true,
 				play: true,
 
@@ -95,6 +96,8 @@
 				translateX: 0,
 				translateY: 0,
 				translateZ: 0,
+
+				wireframe: false,
 			};
 
 			init();
@@ -187,6 +190,8 @@
 				gui.add( params, 'translateX', -1000, 1000 ).step( 0.01 ).onChange( updateModel );
 				gui.add( params, 'translateY', -1000, 1000 ).step( 0.01 ).onChange( updateModel );
 				gui.add( params, 'translateZ', -1000, 1000 ).step( 0.01 ).onChange( updateModel );
+
+				gui.add( params, 'wireframe' ).onChange( updateModel );
 
 				gui.open();
 
@@ -396,12 +401,14 @@
 				updateUniform('spineLength', len);
 
 				updateSplineOutline()
+
+				customMaterial.wireframe = params.wireframe;
 			}
 
 			function updateUniform(name, v) {
 				if (!uniforms) {
 					bufferUniforms[name] = v;
-					console.log('fail', name);
+					console.log('buffering uniform value', name);
 					return
 				}
 				uniforms[name].value = v;
