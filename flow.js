@@ -114,12 +114,13 @@ function modifyShader( material ) {
 }
 
 function initPathShader() {
-    // TODO Texture Loading
     customMaterial = new THREE.MeshPhongMaterial({
-    	// wireframe: true,
         // color: 0x000000
-        color: 0x999999
+        color: 0xffffff,
+        // emission: 0xffffff
     });
+
+    customMaterial.map = new THREE.TextureLoader().load( "orca.png" );
 
     modifyShader( customMaterial );
 
@@ -176,6 +177,12 @@ function onLoad( object ) {
     object.traverse( function ( child ) {
         if ( child instanceof THREE.Mesh ) {
             console.log('old material', child.material);
+
+            // just for smooth shading
+            var geo = new THREE.Geometry().fromBufferGeometry( child.geometry );
+            geo.mergeVertices()
+            geo.computeVertexNormals()
+            child.geometry = new THREE.BufferGeometry().fromGeometry( geo );
 
             // modifyShader( child.material );
 
