@@ -42,6 +42,8 @@
 		<script src="stats.min.js"></script>
 		<script src="dat.gui.min.js"></script>
 
+		<script src="gif/gif.js"></script>
+
 		<script>
 			var BITS = 3;
 			var TEXTURE_WIDTH = 256; // points on the texture
@@ -98,6 +100,8 @@
 				translateZ: 0,
 
 				wireframe: false,
+				makeGif: makeGif,
+				gifProgress: 0
 			};
 
 			init();
@@ -209,10 +213,14 @@
 
 				gui.add( params, 'wireframe' ).onChange( updateModel );
 
+				gui.add( params, 'makeGif' );
+				gui.add( params, 'gifProgress', 0, 1 ).step( 0.01 );
+
 				gui.open();
 
 				// Controls
 				var controls = new THREE.OrbitControls( camera, renderer.domElement );
+
 				controls.damping = 0.2;
 				controls.addEventListener( 'change', render );
 
@@ -391,6 +399,71 @@
 			}
 
 			/****************************/
+
+			var gif, gif_processing = false;
+
+			function gifProgress() {}
+
+			function makeGif() {
+				var gl = renderer.context;
+
+				renderer.context.getImageData = (a, b, c, d) => {
+					const gl_w = gl.drawingBufferWidth, gl_h = gl.drawingBufferHeight;
+					const pixels = new Uint8Array(gl_w * gl_h * 4);
+					renderer.context.readPixels(a, b, c, d, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+					var imageData = new ImageData(Uint8ClampedArray.from(pixels), gl_w, gl_h);
+
+					const img_w = imageData.width, img_h = imageData.height;
+					const data = imageData.data;
+
+					Array.from({ length: img_h },
+						(val, i) => data.slice(i * img_w * 4, (i + 1) * img_w * 4))
+							.forEach((val, i) => data.set(val, (img_h - i - 1) * img_w * 4));
+
+					return imageData;
+				}
+
+				console.log('MakeGif');
+
+				if (gif) {
+					if (!gif_processing) {
+						gif.render();
+						gif_processing = true;
+
+						gif.on('progress', p => {
+							const percent = Math.round(p * 100);
+							params.gifProgress = p;
+							gui.updateDisplay();
+							console.log(percent + '%');
+						});
+
+						gif.on('finished', blob => {
+							window.open(URL.createObjectURL(blob));
+							params.gifProgress = 0;
+							gui.updateDisplay();
+							gif_processing = false;
+							gif = null;
+						});
+					}
+					else {
+						window.alert('gif rendering in progress');
+					}
+
+					return;
+				}
+
+				const workers = navigator.hardwareConcurrency || 2;
+				console.log('gif rendering with', workers, 'web workers');
+
+				gif = new GIF({
+					workers: workers,
+					quality: 5,
+					width: gl.drawingBufferWidth,
+					height: gl.drawingBufferHeight,
+					workerScript: 'gif/gif.worker.js'
+				});
+			}
 
 			function updateModel() {
 				modifierObject.scale.setScalar( params.scale )
@@ -594,6 +667,11 @@
 				render();
 				stats.update();
 				transformControl.update();
+
+				if (gif && !gif_processing) {
+					gif.addFrame(renderer.context, { copy: true, delay: 20 });
+					console.log('gif added frame', gif.frames.length);
+				}
 
 				if (params.play) {
 					params.path += 0.005;
