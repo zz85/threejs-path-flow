@@ -21,12 +21,34 @@
 				font-size: 13px;
 				text-align:center;
 			}
+
+			#footer {
+				position: absolute;
+				bottom: 0px;
+				width: 100%;
+				padding: 5px;
+				font-family: Monospace;
+				font-size: 13px;
+				text-align:center;
+			}
+
+			#gif_container { display: none; }
 		</style>
 	</head>
 	<body>
 
 		<div id="container"></div>
-		<div id="info"><a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - path flow aka curve modifier</div>
+		<div id="info">
+			<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - path flow aka curve modifier
+		</div>
+
+		<div id="footer">
+			<div id="gif_container">
+				<div id="gif_status"></div>
+				<progress id="gif_progress" value="0" max="100"></progress>
+				<a href="" target="_blank" id="gif_download">Download gif</a>
+			</div>
+		</div>
 
 		<script src="three.js"></script>
 
@@ -100,15 +122,15 @@
 				translateZ: 0,
 
 				wireframe: false,
-				makeGif: makeGif,
-				gifProgress: 0
+				makeGif: makeGif
 			};
+
+			var gif_container, gif_status, gif_progress, gif_download;
 
 			init();
 			animate();
 
 			function init() {
-
 				container = document.getElementById( 'container' );
 
 				scene = new THREE.Scene();
@@ -214,7 +236,6 @@
 				gui.add( params, 'wireframe' ).onChange( updateModel );
 
 				gui.add( params, 'makeGif' );
-				gui.add( params, 'gifProgress', 0, 1 ).step( 0.01 );
 
 				gui.open();
 
@@ -402,9 +423,12 @@
 
 			var gif, gif_processing = false;
 
-			function gifProgress() {}
-
 			function makeGif() {
+				gif_container = document.getElementById('gif_container');
+				gif_status = document.getElementById('gif_status');
+				gif_progress = document.getElementById('gif_progress');
+				gif_download = document.getElementById('gif_download');
+
 				var gl = renderer.context;
 
 				renderer.context.getImageData = (a, b, c, d) => {
@@ -430,20 +454,21 @@
 					if (!gif_processing) {
 						gif.render();
 						gif_processing = true;
+						gif_status.textContent = 'Gif rendering ...';
 
 						gif.on('progress', p => {
 							const percent = Math.round(p * 100);
-							params.gifProgress = p;
-							gui.updateDisplay();
+
 							console.log(percent + '%');
+							gif_progress.value = percent;
 						});
 
 						gif.on('finished', blob => {
-							window.open(URL.createObjectURL(blob));
-							params.gifProgress = 0;
-							gui.updateDisplay();
 							gif_processing = false;
 							gif = null;
+							gif_download.style.display = 'block';
+							gif_status.textContent = 'Gif render complete';
+							gif_download.href = URL.createObjectURL(blob);
 						});
 					}
 					else {
@@ -453,7 +478,13 @@
 					return;
 				}
 
+				gif_container.style.display = 'block';
+				gif_download.style.display = 'none';
+				gif_progress.value = 0;
+				gif_status.textContent = 'Gif capturing ...';
+
 				const workers = navigator.hardwareConcurrency || 2;
+
 				console.log('gif rendering with', workers, 'web workers');
 
 				gif = new GIF({
@@ -670,7 +701,9 @@
 
 				if (gif && !gif_processing) {
 					gif.addFrame(renderer.context, { copy: true, delay: 20 });
-					console.log('gif added frame', gif.frames.length);
+					const frames = gif.frames.length;
+					console.log('gif added frame', frames);
+					gif_status.textContent = 'Gif capturing ... frame ' + frames;
 				}
 
 				if (params.play) {
