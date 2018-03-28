@@ -49,7 +49,7 @@ The vertex shader reads the texture, based on its offset transforms the geometry
 - [ ] Add follow cursor
 - [ ] Make flow a parameter
 - [ ] Shading
-- [ ] [Gif Support](https://github.com/jnordberg/gif.js/)
+- [x] [Gif Support](https://github.com/jnordberg/gif.js/)
 - [ ] Better rotation/transform controls
 
 ### Context

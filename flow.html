@@ -21,12 +21,34 @@
 				font-size: 13px;
 				text-align:center;
 			}
+
+			#footer {
+				position: absolute;
+				bottom: 0px;
+				width: 100%;
+				padding: 5px;
+				font-family: Monospace;
+				font-size: 13px;
+				text-align:center;
+			}
+
+			#gif_container { display: none; }
 		</style>
 	</head>
 	<body>
 
 		<div id="container"></div>
-		<div id="info"><a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - path flow aka curve modifier</div>
+		<div id="info">
+			<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - path flow aka curve modifier
+		</div>
+
+		<div id="footer">
+			<div id="gif_container">
+				<div id="gif_status"></div>
+				<progress id="gif_progress" value="0" max="100"></progress>
+				<a href="" target="_blank" id="gif_download">Download gif</a>
+			</div>
+		</div>
 
 		<script src="three.js"></script>
 
@@ -41,6 +63,8 @@
 
 		<script src="stats.min.js"></script>
 		<script src="dat.gui.min.js"></script>
+
+		<script src="gif/gif.js"></script>
 
 		<script>
 			var BITS = 3;
@@ -98,13 +122,15 @@
 				translateZ: 0,
 
 				wireframe: false,
+				makeGif: makeGif
 			};
+
+			var gif_container, gif_status, gif_progress, gif_download;
 
 			init();
 			animate();
 
 			function init() {
-
 				container = document.getElementById( 'container' );
 
 				scene = new THREE.Scene();
@@ -209,10 +235,13 @@
 
 				gui.add( params, 'wireframe' ).onChange( updateModel );
 
+				gui.add( params, 'makeGif' );
+
 				gui.open();
 
 				// Controls
 				var controls = new THREE.OrbitControls( camera, renderer.domElement );
+
 				controls.damping = 0.2;
 				controls.addEventListener( 'change', render );
 
@@ -391,6 +420,81 @@
 			}
 
 			/****************************/
+
+			var gif, gif_processing = false;
+
+			function makeGif() {
+				gif_container = document.getElementById('gif_container');
+				gif_status = document.getElementById('gif_status');
+				gif_progress = document.getElementById('gif_progress');
+				gif_download = document.getElementById('gif_download');
+
+				var gl = renderer.context;
+
+				renderer.context.getImageData = (a, b, c, d) => {
+					const gl_w = gl.drawingBufferWidth, gl_h = gl.drawingBufferHeight;
+					const pixels = new Uint8Array(gl_w * gl_h * 4);
+					renderer.context.readPixels(a, b, c, d, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+					var imageData = new ImageData(Uint8ClampedArray.from(pixels), gl_w, gl_h);
+
+					const img_w = imageData.width, img_h = imageData.height;
+					const data = imageData.data;
+
+					Array.from({ length: img_h },
+						(val, i) => data.slice(i * img_w * 4, (i + 1) * img_w * 4))
+							.forEach((val, i) => data.set(val, (img_h - i - 1) * img_w * 4));
+
+					return imageData;
+				}
+
+				console.log('MakeGif');
+
+				if (gif) {
+					if (!gif_processing) {
+						gif.render();
+						gif_processing = true;
+						gif_status.textContent = 'Gif rendering ...';
+
+						gif.on('progress', p => {
+							const percent = Math.round(p * 100);
+
+							console.log(percent + '%');
+							gif_progress.value = percent;
+						});
+
+						gif.on('finished', blob => {
+							gif_processing = false;
+							gif = null;
+							gif_download.style.display = 'block';
+							gif_status.textContent = 'Gif render complete';
+							gif_download.href = URL.createObjectURL(blob);
+						});
+					}
+					else {
+						window.alert('gif rendering in progress');
+					}
+
+					return;
+				}
+
+				gif_container.style.display = 'block';
+				gif_download.style.display = 'none';
+				gif_progress.value = 0;
+				gif_status.textContent = 'Gif capturing ...';
+
+				const workers = navigator.hardwareConcurrency || 2;
+
+				console.log('gif rendering with', workers, 'web workers');
+
+				gif = new GIF({
+					workers: workers,
+					quality: 5,
+					width: gl.drawingBufferWidth,
+					height: gl.drawingBufferHeight,
+					workerScript: 'gif/gif.worker.js'
+				});
+			}
 
 			function updateModel() {
 				modifierObject.scale.setScalar( params.scale )
@@ -594,6 +698,13 @@
 				render();
 				stats.update();
 				transformControl.update();
+
+				if (gif && !gif_processing) {
+					gif.addFrame(renderer.context, { copy: true, delay: 20 });
+					const frames = gif.frames.length;
+					console.log('gif added frame', frames);
+					gif_status.textContent = 'Gif capturing ... frame ' + frames;
+				}
 
 				if (params.play) {
 					params.path += 0.005;
